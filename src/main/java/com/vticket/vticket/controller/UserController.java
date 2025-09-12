@@ -1,13 +1,11 @@
 package com.vticket.vticket.controller;
 
 
-import com.vticket.vticket.dto.request.ApiResponse;
+import com.vticket.vticket.dto.response.ApiResponse;
 import com.vticket.vticket.dto.request.UserCreationRequest;
 import com.vticket.vticket.dto.response.UserResponse;
-import com.vticket.vticket.exception.ErrorCode;
 import com.vticket.vticket.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;

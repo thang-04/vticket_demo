@@ -23,14 +23,6 @@ public class JwtService {
     @Value("${jwt.signerKey}")
     protected String SIGNER_KEY;
 
-    @Autowired
-    private UserService userService;
-
-    @Autowired
-    private JwtService jwtService;
-
-    @Autowired
-    private UserCollection userCollection;
 
 //    public String generateToken(User user, Date expireDate, String clientKey) {
 //
@@ -72,12 +64,12 @@ public class JwtService {
 //            throw new RuntimeException(e);
 //        }
 //    }
-    public String generateToken(User user, Date expireDate, String clientKey) {
+    public String generateToken(User user, Date expireDate) {
         try {
             //The JWT signature algorithm we will be using to sign the token
             SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
             //We will sign our JWT with our ApiKey secret
-            byte[] apiKeySecretBytes = DatatypeConverter.parseBase64Binary(clientKey);
+            byte[] apiKeySecretBytes = DatatypeConverter.parseBase64Binary(SIGNER_KEY);
             Key signingKey = new SecretKeySpec(apiKeySecretBytes, signatureAlgorithm.getJcaName());
             //Let's set the JWT Claims
             String username = "";
@@ -100,7 +92,7 @@ public class JwtService {
                     .claim("uuid", uuid)
                     .claim("access_token", access_token)
                     .claim("created", created)
-                    .claim("clientKey", clientKey)
+                    .claim("clientKey", SIGNER_KEY)
                     .setHeaderParam("typ", "JWS")
                     .signWith(signatureAlgorithm, signingKey);
 
@@ -139,7 +131,7 @@ public class JwtService {
         return user;
     }
 
-    public User verifyRefreshTokenMg(String jwt) {
+    public User verifyRefreshToken(String jwt) {
         User user = new User();
         try {
             if (StringUtils.isEmpty(jwt)) {
@@ -173,32 +165,6 @@ public class JwtService {
         return user;
     }
 
-    public User refreshToken(String user_id) {
-        User user = userService.getUserById(user_id);
-        try {
-            if (user == null) {
-                return null;
-            }
-            String oldAccessToken = user.getAccess_token();
-            user.setAccess_token("");
 
-            Date expireDate = new Date(System.currentTimeMillis() + 15L * 24 * 60 * 60 * 1000);
-            Date expireDateRefresh = new Date(System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000);
-
-            String accessToken = jwtService.generateToken(user, expireDate, SIGNER_KEY);//15 ngày
-            user.setAccess_token(accessToken);
-
-            String refreshToken = jwtService.generateToken(user, expireDateRefresh, SIGNER_KEY);//30 ngày
-            user.setRefresh_token(refreshToken);
-
-            if (!userCollection.updateTokenOfUser(user, expireDate)) {
-                user = null;
-            }//else update redis
-
-        } catch (Exception e) {
-            return null;
-        }
-        return null;
-    }
 
 }
