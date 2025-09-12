@@ -1,0 +1,53 @@
+package com.vticket.vticket.domain.mongodb.entity;
+
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import lombok.*;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+
+import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
+
+@Getter
+@Setter
+@AllArgsConstructor
+@NoArgsConstructor
+@Builder(toBuilder = true)
+@Document(collection = "users")
+public class User {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    @Field("id")
+    private String id;
+    @Field("full_name")
+    private String full_name;
+    @Field("username")
+    private String username;
+    @Field("password")
+    private String password;
+    @Field("email")
+    private String email;
+    @Field("address")
+    private String address;
+    @Field("avatar")
+    private String avatar;
+    @Field("created_at")
+    private LocalDate created_at;
+    @Field("updated_at")
+    private LocalDate updated_at;
+    @Field("access_token")
+    private String access_token;
+    @Field("refresh_token")
+    private String refresh_token;
+//    @Field("verify_token")
+//    private String verify_token;
+    @Field("roles")
+    private Set<Role> roles = new HashSet<>();
+    @Field("is_active")
+    private boolean isActive = true;
+
+}

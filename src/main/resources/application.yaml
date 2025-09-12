@@ -1,0 +1,28 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /vticket
+
+spring:
+  # MySQL
+  datasource:
+    url: jdbc:mysql://localhost:3306/vticket_test
+    driverClassName: "com.mysql.cj.jdbc.Driver"
+    password: 12345
+    username: root
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+# MongoDB
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/vticket_test
+      database: vticket_test
+      host: localhost
+      port: 27017
+
+jwt:
+  signerKey: cdOjoneRSm7ajl1RsOznZmSEYkd+6NnRN5S7fj2QtH/Rhheb6QnC8m1SGzznV75D
+
