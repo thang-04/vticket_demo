@@ -26,3 +26,14 @@ spring:
 jwt:
   signerKey: cdOjoneRSm7ajl1RsOznZmSEYkd+6NnRN5S7fj2QtH/Rhheb6QnC8m1SGzznV75D
 
+# Logging Configuration
+logging:
+  config: classpath:log4j2.xml
+  level:
+    com.vticket.vticket: DEBUG
+    org.springframework.data.mongodb: DEBUG
+    org.springframework.security: DEBUG
+    io.jsonwebtoken: DEBUG
+    org.springframework.web: DEBUG
+    root: INFO
+

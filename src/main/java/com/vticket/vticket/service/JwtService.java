@@ -2,11 +2,11 @@ package com.vticket.vticket.service;
 
 import com.vticket.vticket.config.Config;
 import com.vticket.vticket.domain.mongodb.entity.User;
-import com.vticket.vticket.domain.mongodb.repo.UserCollection;
 import io.jsonwebtoken.*;
 import io.micrometer.common.util.StringUtils;
 import lombok.experimental.NonFinal;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -18,6 +18,8 @@ import java.util.UUID;
 
 @Service
 public class JwtService {
+
+    private static final Logger logger = LogManager.getLogger(JwtService.class);
 
     @NonFinal
     @Value("${jwt.signerKey}")
@@ -65,6 +67,7 @@ public class JwtService {
 //        }
 //    }
     public String generateToken(User user, Date expireDate) {
+        logger.debug("Generating JWT token for user: {}", user.getUsername());
         try {
             //The JWT signature algorithm we will be using to sign the token
             SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
@@ -97,17 +100,21 @@ public class JwtService {
                     .signWith(signatureAlgorithm, signingKey);
 
             builder.setExpiration(expireDate);
-            return builder.compact();
+            String token = builder.compact();
+            logger.info("Successfully generated JWT token for user: {} with expiration: {}", username, expireDate);
+            return token;
         } catch (Exception ex) {
-//            LOGGER.error(ex.getMessage(), ex);
+            logger.error("Error generating JWT token for user: {} - {}", user.getUsername(), ex.getMessage(), ex);
             return "";
         }
     }
 
     public User verifyAcessToken(String jwt) {
+        logger.debug("Verifying access token");
         User user = new User();
         try {
             if (StringUtils.isEmpty(jwt)) {
+                logger.warn("Empty JWT token provided");
                 user = null;
             } else {
                 Claims claims = Jwts.parser()
@@ -119,22 +126,26 @@ public class JwtService {
                 user.setAccess_token(access_token);
                 user.setUsername(username);
                 user.setId(id);
-
+                logger.info("Successfully verified access token for user: {}", username);
             }
         } catch (ExpiredJwtException ex) {
-//            //expire time
-            user.setId(String.valueOf(Config.CODE.ERROR_CODE_103));
+            logger.warn("JWT token has expired: {}", ex.getMessage());
+            if (user != null) {
+                user.setId(String.valueOf(Config.CODE.ERROR_CODE_103));
+            }
         } catch (Exception ex) {
-//            LOGGER.error(ex.getMessage(), ex);
+            logger.error("Error verifying access token: {}", ex.getMessage(), ex);
             user = null;
         }
         return user;
     }
 
     public User verifyRefreshToken(String jwt) {
+        logger.debug("Verifying refresh token");
         User user = new User();
         try {
             if (StringUtils.isEmpty(jwt)) {
+                logger.warn("Empty refresh token provided");
                 user = null;
             } else {
                 Claims claims = Jwts.parser()
@@ -146,20 +157,23 @@ public class JwtService {
                 long dateNow = System.currentTimeMillis();
                 if (dateNow - created < 10000) {
                     //khong cho phep thuc hien lien tuc trong 10s
+                    logger.warn("Refresh token used too frequently for user: {}", username);
                     user = null;
                 } else {
                     String id = claims.getId();
                     user.setAccess_token(access_token);
                     user.setUsername(username);
-
                     user.setId(id);
+                    logger.info("Successfully verified refresh token for user: {}", username);
                 }
             }
         } catch (ExpiredJwtException ex) {
-            //expire time
-            user.setId(String.valueOf(Config.CODE.ERROR_CODE_103));
+            logger.warn("Refresh token has expired: {}", ex.getMessage());
+            if (user != null) {
+                user.setId(String.valueOf(Config.CODE.ERROR_CODE_103));
+            }
         } catch (Exception ex) {
-//            LOGGER.error(ex.getMessage(), ex);
+            logger.error("Error verifying refresh token: {}", ex.getMessage(), ex);
             user = null;
         }
         return user;

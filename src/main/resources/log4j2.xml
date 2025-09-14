@@ -1,0 +1,233 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration status="WARN">
+    <!-- Author: Vticket Project -->
+    <Properties>
+        <Property name="baseDir">logs</Property>
+        <Property name="LOG_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} [%t] %-5level %logger{36} - %msg%n</Property>
+    </Properties>
+    
+    <Appenders>
+        <!-- Console Appender -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} [%t] %-5p %c{1}:%L - %msg%n" />
+        </Console>
+                                 
+        <!-- Main Application Log -->
+        <RollingFile name="vticket_INFO" filename="logs/vticket.log" filepattern="logs/vticket.log.%d{yyyy-MM-dd}.gz">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1} %msg%n" />
+            <Policies>
+                <TimeBasedTriggeringPolicy />
+                <SizeBasedTriggeringPolicy size="100 MB" />
+            </Policies>
+            <DefaultRolloverStrategy max="7" />
+        </RollingFile>
+        
+        <!-- Error Log -->
+        <RollingFile name="vticket_ERROR" filename="logs/vticket_ERROR.log" filepattern="logs/vticket_ERROR.%d{yyyy-MM-dd}.log.gz">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1} %msg%n" />
+            <Policies>
+                <SizeBasedTriggeringPolicy size="50 MB" />
+            </Policies>
+            <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
+            <DefaultRolloverStrategy max="3" />
+        </RollingFile>
+
+        <!-- JWT Security Log -->
+        <RollingFile name="jwt_security" filename="logs/jwt_security/log" filepattern="logs/jwt_security/jwt_security.%d{yyyy-MM-dd}.gz">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1} %msg%n" />
+            <Policies>
+                <TimeBasedTriggeringPolicy />
+            </Policies>
+            <DefaultRolloverStrategy max="7" />
+        </RollingFile>
+		
+        <!-- User Management Log -->
+        <RollingFile name="user_management" filename="logs/user_management/log" filepattern="logs/user_management/user_management.%d{yyyy-MM-dd}.gz">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1} %msg%n" />
+            <Policies>
+                <TimeBasedTriggeringPolicy />
+            </Policies>
+            <DefaultRolloverStrategy max="7" />
+        </RollingFile>
+		
+        <!-- Database Operations Log -->
+        <RollingFile name="database_ops" filename="logs/database_ops/log" filepattern="logs/database_ops/database_ops.%d{yyyy-MM-dd}.gz">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1} %msg%n" />
+            <Policies>
+                <TimeBasedTriggeringPolicy />
+            </Policies>
+            <DefaultRolloverStrategy max="7" />
+        </RollingFile>
+		
+        <!-- API Request/Response Log -->
+        <RollingFile name="api_requests" filename="logs/api_requests/log" filepattern="logs/api_requests/api_requests.%d{yyyy-MM-dd}.gz">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1} %msg%n" />
+            <Policies>
+                <TimeBasedTriggeringPolicy />
+            </Policies>
+            <DefaultRolloverStrategy max="7" />
+        </RollingFile>
+		
+        <!-- Performance Monitoring Log -->
+        <RollingFile name="performance" filename="logs/performance/log" filepattern="logs/performance/performance.%d{yyyy-MM-dd}.gz">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss} %-5p %c{1} %msg%n" />
+            <Policies>
+                <TimeBasedTriggeringPolicy />
+            </Policies>
+            <DefaultRolloverStrategy max="7" />
+        </RollingFile>
+    </Appenders>
+    
+    <Loggers>
+        <!-- JWT Security Logger -->
+        <logger name="com.vticket.vticket.service.JwtService" level="DEBUG" additivity="false">
+            <appender-ref ref="jwt_security" />
+            <appender-ref ref="Console" />
+        </logger>
+
+        <!-- User Management Logger -->
+        <logger name="com.vticket.vticket.service.UserService" level="DEBUG" additivity="false">
+            <appender-ref ref="user_management" />
+            <appender-ref ref="Console" />
+        </logger>
+		
+        <!-- Database Operations Logger -->
+        <logger name="com.vticket.vticket.domain.mongodb" level="DEBUG" additivity="false">
+            <appender-ref ref="database_ops" />
+        </logger>
+		
+        <!-- API Controllers Logger -->
+        <logger name="com.vticket.vticket.controller" level="INFO" additivity="false">
+            <appender-ref ref="api_requests" />
+            <appender-ref ref="Console" />
+        </logger>
+		
+        <!-- Performance Logger -->
+        <logger name="performance" level="INFO" additivity="false">
+            <appender-ref ref="performance" />
+        </logger>
+		
+        <!-- Spring Framework Logger -->
+        <logger name="org.springframework" level="INFO" additivity="false">
+            <appender-ref ref="vticket_INFO" />
+        </logger>
+		
+        <!-- MongoDB Logger -->
+        <logger name="org.springframework.data.mongodb" level="DEBUG" additivity="false">
+            <appender-ref ref="database_ops" />
+        </logger>
+		
+        <!-- JWT Library Logger -->
+        <logger name="io.jsonwebtoken" level="DEBUG" additivity="false">
+            <appender-ref ref="jwt_security" />
+        </logger>
+		
+        <!-- Root Logger -->
+        <Root level="INFO">
+            <AppenderRef ref="vticket_INFO" />
+            <AppenderRef ref="vticket_ERROR" /> 
+            <AppenderRef ref="Console" />
+        </Root>
+    </Loggers>
+</Configuration>
+
+
+<!-- //
+        <!-- Async Appender with Disruptor for better performance -->
+        <AsyncAppender name="AsyncFile" bufferSize="8192" includeLocation="false">
+            <AppenderRef ref="FileAppender"/>
+        </AsyncAppender>
+
+        <AsyncAppender name="AsyncError" bufferSize="8192" includeLocation="false">
+            <AppenderRef ref="ErrorFileAppender"/>
+        </AsyncAppender>operties>
+    
+    <!-- Use Disruptor for async logging -->
+    <AsyncLoggerConfig includeLocation="false" />
+
+    <Appenders>
+        <!-- Console Appender -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <ThresholdFilter level="INFO" onMatch="ACCEPT" onMismatch="DENY"/>
+        </Console>
+
+        <!-- File Appender -->
+        <RollingFile name="FileAppender" fileName="${LOG_FILE}"
+                     filePattern="logs/vticket-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="${LOG_FILE_MAX_SIZE}"/>
+            </Policies>
+            <DefaultRolloverStrategy max="${LOG_FILE_MAX_FILES}"/>
+        </RollingFile>
+
+        <!-- Error File Appender -->
+        <RollingFile name="ErrorFileAppender" fileName="logs/vticket-error.log"
+                     filePattern="logs/vticket-error-%d{yyyy-MM-dd}-%i.log.gz">
+            <PatternLayout pattern="${LOG_PATTERN}"/>
+            <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1" modulate="true"/>
+                <SizeBasedTriggeringPolicy size="${LOG_FILE_MAX_SIZE}"/>
+            </Policies>
+            <DefaultRolloverStrategy max="${LOG_FILE_MAX_FILES}"/>
+        </RollingFile>
+
+        <!-- Async Appender with Disruptor for better performance -->
+        <AsyncAppender name="AsyncFile" bufferSize="8192" includeLocation="false">
+            <AppenderRef ref="FileAppender"/>
+        </AsyncAppender>
+
+        <AsyncAppender name="AsyncError" bufferSize="8192" includeLocation="false">
+            <AppenderRef ref="ErrorFileAppender"/>
+        </AsyncAppender>
+    </Appenders>
+
+    <Loggers>
+        <!-- Application specific loggers -->
+        <Logger name="com.vticket.vticket" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AsyncFile"/>
+            <AppenderRef ref="AsyncError"/>
+        </Logger>
+
+        <!-- Spring Framework loggers -->
+        <Logger name="org.springframework" level="INFO" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AsyncFile"/>
+        </Logger>
+
+        <!-- MongoDB loggers -->
+        <Logger name="org.springframework.data.mongodb" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AsyncFile"/>
+        </Logger>
+
+        <!-- Security loggers -->
+        <Logger name="org.springframework.security" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AsyncFile"/>
+        </Logger>
+
+        <!-- JWT loggers -->
+        <Logger name="io.jsonwebtoken" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AsyncFile"/>
+        </Logger>
+
+        <!-- HTTP request/response loggers -->
+        <Logger name="org.springframework.web" level="DEBUG" additivity="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AsyncFile"/>
+        </Logger>
+
+        <!-- Root logger -->
+        <Root level="INFO">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AsyncFile"/>
+            <AppenderRef ref="AsyncError"/>
+        </Root>
+    </Loggers>
+</Configuration> -->
