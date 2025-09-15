@@ -12,6 +12,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -203,5 +204,18 @@ public class UserService {
             return null;
         }
         return user;
+    }
+
+    public UserResponse getMyInfo() {
+        var context = SecurityContextHolder.getContext();
+        String username = context.getAuthentication().getName();
+
+        User user = userCollection.getUserInfoByUserName(username);
+        if (user == null) {
+            logger.warn("User not found in context: {}", username);
+            throw new RuntimeException("User not found with username: " + username);
+        }
+
+        return userMapper.toResponse(user);
     }
 }

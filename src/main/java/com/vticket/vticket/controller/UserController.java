@@ -4,6 +4,7 @@ package com.vticket.vticket.controller;
 import com.vticket.vticket.dto.response.ApiResponse;
 import com.vticket.vticket.dto.request.UserCreationRequest;
 import com.vticket.vticket.dto.response.UserResponse;
+import com.vticket.vticket.exception.ErrorCode;
 import com.vticket.vticket.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -25,7 +26,7 @@ public class UserController {
                     .build();
         } catch (Exception e) {
             return ApiResponse.<UserResponse>builder()
-                    .code(1002)
+                    .code(ErrorCode.USER_EXISTED.getCode())
                     .message(e.getMessage())
                     .result(null)
                     .build();
@@ -39,19 +40,19 @@ public class UserController {
 //                .build();
 //    }
 
-//    @GetMapping()
-//    public ApiResponse<UserResponse> getUserById(@RequestParam String id) {
-//        try {
-//            UserResponse userrespone = userService.getUserById(id);
-//            return ApiResponse.<UserResponse>builder()
-//                    .result(userrespone)
-//                    .build();
-//        } catch (Exception e) {
-//            return ApiResponse.<UserResponse>builder()
-//                    .code(1002)
-//                    .message(e.getMessage())
-//                    .result(null)
-//                    .build();
-//        }
-//    }
+    @GetMapping()
+    public ApiResponse<UserResponse> getUserById() {
+        try {
+            UserResponse userrespone = userService.getMyInfo();
+            return ApiResponse.<UserResponse>builder()
+                    .result(userrespone)
+                    .build();
+        } catch (Exception e) {
+            return ApiResponse.<UserResponse>builder()
+                    .code(ErrorCode.USER_EXISTED.getCode())
+                    .message(e.getMessage())
+                    .result(null)
+                    .build();
+        }
+    }
 }
