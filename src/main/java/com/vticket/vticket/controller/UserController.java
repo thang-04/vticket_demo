@@ -32,11 +32,26 @@ public class UserController {
         }
     }
 
-    @GetMapping
-    public ApiResponse<List<UserResponse>> getAllUsers() {
-        return ApiResponse.<List<UserResponse>>builder()
-                .result(userService.getAllUser())
-                .build();
-    }
+//    @GetMapping
+//    public ApiResponse<List<UserResponse>> getAllUsers() {
+//        return ApiResponse.<List<UserResponse>>builder()
+//                .result(userService.getAllUser())
+//                .build();
+//    }
 
+//    @GetMapping()
+//    public ApiResponse<UserResponse> getUserById(@RequestParam String id) {
+//        try {
+//            UserResponse userrespone = userService.getUserById(id);
+//            return ApiResponse.<UserResponse>builder()
+//                    .result(userrespone)
+//                    .build();
+//        } catch (Exception e) {
+//            return ApiResponse.<UserResponse>builder()
+//                    .code(1002)
+//                    .message(e.getMessage())
+//                    .result(null)
+//                    .build();
+//        }
+//    }
 }

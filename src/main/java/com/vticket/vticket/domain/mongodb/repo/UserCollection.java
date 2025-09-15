@@ -2,7 +2,11 @@ package com.vticket.vticket.domain.mongodb.repo;
 
 import com.vticket.vticket.domain.mongodb.entity.User;
 import com.vticket.vticket.dto.request.UserCreationRequest;
+import com.vticket.vticket.service.UserService;
 import io.micrometer.common.util.StringUtils;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.mongodb.core.MongoTemplate;
@@ -16,12 +20,15 @@ import java.util.List;
 
 @Repository
 public class UserCollection {
+    private static final Logger logger = LogManager.getLogger(UserCollection.class);
+
     @Autowired
     @Qualifier("mongoTemplate")
     private MongoTemplate mongoTemplate;
 
-    public void insertUser(User user) {
+    public User insertUser(User user) {
         mongoTemplate.insert(user);
+        return user;
     }
 
     public User getUserInfoByUserName(String userName) {
@@ -41,8 +48,23 @@ public class UserCollection {
         return mongoTemplate.findAll(User.class);
     }
 
-    public User getUserById(String id) {
-        return mongoTemplate.findById(id, User.class);
+    public User getUserById(String userId) {
+        User users = null;
+        try {
+            Criteria criteria = Criteria.where("_id").is(userId);
+            Query query = new Query();
+            query.addCriteria(criteria);
+            users = mongoTemplate.findOne(query, User.class);
+            if (users != null) {
+                logger.info("Found user by ID: {} - Username: {}", userId, users.getUsername());
+            } else {
+                logger.warn("User not found with ID: {}", userId);
+            }
+        } catch (Exception e) {
+
+            logger.error("Error finding user by ID: {} - {}", userId, e.getMessage(), e);
+        }
+        return users;
     }
 
     public boolean updateTokenOfUser(User users, Date expireDate) {
@@ -64,7 +86,7 @@ public class UserCollection {
                 response = true;
             }
         } catch (Exception e) {
-//            logger.error("updateTokenOfUser|users={}|Exception={}", gson.toJson(users), e.getMessage(), e);
+            logger.error("updateTokenOfUser|users={}|Exception={}", users, e.getMessage(), e);
         }
         return response;
     }

@@ -44,7 +44,7 @@ public class UserService {
             User user = userMapper.toEntity(userCreationRequest);
             user.setPassword(userCreationRequest.getPassword());
 
-            Date expireDate = new Date(System.currentTimeMillis() + 15L * 24 * 60 * 60 * 1000);
+            Date expireDate = new Date(System.currentTimeMillis() + 100000);
             Date expireDateRefresh = new Date(System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000);
 
             String accessToken = jwtService.generateToken(user, expireDate);//15 ngày
@@ -54,10 +54,11 @@ public class UserService {
             user.setRefresh_token(refreshToken);
 
 //            processUserService.enQueueUser(user);
-            userCollection.insertUser(user);
-            logger.info("Successfully created user: {}", userCreationRequest.getUsername());
-            //day vao redis
-            return userMapper.toResponse(user);
+            User savedUser = userCollection.insertUser(user);
+
+            logger.info("Successfully created user: {} with ID: {}", userCreationRequest.getUsername(), savedUser.getId());
+
+            return userMapper.toResponse(savedUser);
 
         } catch (DataIntegrityViolationException e) {
             logger.error("Data integrity violation while creating user: {} - {}", userCreationRequest.getUsername(), e.getMessage());
@@ -144,7 +145,7 @@ public class UserService {
         User user = null;
         try {
             user = jwtService.verifyRefreshToken(token);
-            if (user != null && user.getId() != null && Long.parseLong(user.getId()) > 0) {
+            if (user != null && user.getId() != null) {
                 user = getUserById(user.getId());
                 if (user != null && !token.equals(user.getRefresh_token())) {
                     logger.warn("Refresh token mismatch for user ID: {}", user.getId());
@@ -167,21 +168,20 @@ public class UserService {
                 logger.warn("User not found for token refresh: {}", user_id);
                 return null;
             }
-            
-            // Lưu token cũ để log
+
             String oldAccessToken = user.getAccess_token();
             String oldRefreshToken = user.getRefresh_token();
-            
-            logger.debug("Old tokens for user {} - Access: {}, Refresh: {}", user_id, 
-                oldAccessToken != null ? "***" + oldAccessToken.substring(Math.max(0, oldAccessToken.length() - 4)) : "null",
-                oldRefreshToken != null ? "***" + oldRefreshToken.substring(Math.max(0, oldRefreshToken.length() - 4)) : "null");
-            
-            // Invalidate token cũ ngay lập tức
+
+            logger.debug("Old tokens for user {} - Access: {}, Refresh: {}", user_id,
+                    oldAccessToken != null ? "***" + oldAccessToken.substring(Math.max(0, oldAccessToken.length() - 4)) : "null",
+                    oldRefreshToken != null ? "***" + oldRefreshToken.substring(Math.max(0, oldRefreshToken.length() - 4)) : "null");
+
+            // Invalidate  old_token
             user.setAccess_token("");
             user.setRefresh_token("");
 
             // Tạo token mới
-            Date expireDate = new Date(System.currentTimeMillis() + 15L * 24 * 60 * 60 * 1000);
+            Date expireDate = new Date(System.currentTimeMillis() + 100000);
             Date expireDateRefresh = new Date(System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000);
 
             String accessToken = jwtService.generateToken(user, expireDate);//15 ngày
@@ -190,15 +190,12 @@ public class UserService {
             String refreshToken = jwtService.generateToken(user, expireDateRefresh);//30 ngày
             user.setRefresh_token(refreshToken);
 
-            // Cập nhật database
+            // update database
             if (!userCollection.updateTokenOfUser(user, expireDate)) {
                 logger.error("Failed to update token in database for user: {}", user_id);
                 user = null;
             } else {
                 logger.info("Successfully refreshed tokens for user: {}", user_id);
-                // TODO: Implement token blacklist service if needed
-                // tokenBlacklistService.addToBlacklist(oldAccessToken);
-                // tokenBlacklistService.addToBlacklist(oldRefreshToken);
             }
 
         } catch (Exception e) {
