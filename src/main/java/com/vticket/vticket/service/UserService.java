@@ -1,5 +1,7 @@
 package com.vticket.vticket.service;
 
+import com.google.gson.reflect.TypeToken;
+import com.vticket.vticket.config.RedisKey;
 import com.vticket.vticket.domain.mongodb.entity.User;
 import com.vticket.vticket.domain.mongodb.repo.UserCollection;
 import com.vticket.vticket.dto.request.UserCreationRequest;
@@ -17,6 +19,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import static com.vticket.vticket.utils.CommonUtils.gson;
 
 @Service
 public class UserService {
@@ -33,14 +38,17 @@ public class UserService {
     private ProcessUserService processUserService;
     @Autowired
     private JwtService jwtService;
+    @Autowired
+    private RedisService redisService;
 
 
     public UserResponse createUser(UserCreationRequest userCreationRequest) {
         logger.info("Creating new user with username: {}", userCreationRequest.getUsername());
+        long start = System.currentTimeMillis();
+
         try {
             if (userCollection.getUserInfoByUserName(userCreationRequest.getUsername()) != null) {
                 logger.warn("Username already exists: {}", userCreationRequest.getUsername());
-                throw new RuntimeException("UserName already in use");
             }
             User user = userMapper.toEntity(userCreationRequest);
             user.setPassword(userCreationRequest.getPassword());
@@ -57,17 +65,20 @@ public class UserService {
 //            processUserService.enQueueUser(user);
             User savedUser = userCollection.insertUser(user);
 
-            logger.info("Successfully created user: {} with ID: {}", userCreationRequest.getUsername(), savedUser.getId());
-
+            logger.info("Successfully created user: {} with time: {} and ID: {}", userCreationRequest.getUsername(), (System.currentTimeMillis() - start), savedUser.getId());
+            putUserInfoToRedis(savedUser);
             return userMapper.toResponse(savedUser);
 
-        } catch (DataIntegrityViolationException e) {
-            logger.error("Data integrity violation while creating user: {} - {}", userCreationRequest.getUsername(), e.getMessage());
-            throw new AppException(ErrorCode.USER_EXISTED);
         } catch (Exception e) {
             logger.error("Error creating user: {} - {}", userCreationRequest.getUsername(), e.getMessage(), e);
             throw e;
         }
+    }
+
+    public void putUserInfoToRedis(User user) {
+        String keyRedis = RedisKey.USER_ID + user.getId();
+        redisService.getRedisSsoUser().opsForValue().set(keyRedis, gson.toJson(user));
+        redisService.getRedisSsoUser().expire(keyRedis, 30L, TimeUnit.MINUTES);
     }
 
     public List<UserResponse> getAllUser() {
@@ -98,17 +109,62 @@ public class UserService {
 
     public User getUserById(String id) {
         logger.debug("Retrieving user by ID: {}", id);
-        if (StringUtils.isBlank(id)) {
-            logger.warn("User ID is blank or null");
-            throw new RuntimeException("Id is required");
+        long start = System.currentTimeMillis();
+        String dataFrom = "BY REDIS";
+        String keyRedis = RedisKey.USER_ID + id;
+        String resultRedis;
+        User user = null;
+        try {
+            resultRedis = redisService.getRedisSsoUser().opsForValue().get(keyRedis);
+            if (!StringUtils.isBlank(resultRedis)) {
+                user = gson.fromJson(resultRedis, new TypeToken<User>() {
+                }.getType());
+                logger.info("User found in Redis cache for ID: {} with time: {}", id, (System.currentTimeMillis() - start));
+            } else {
+                user = userCollection.getUserById(id);
+                dataFrom = "BY MONGO";
+                logger.info("User retrieved from MONGO for ID: {} with time: {}", id, (System.currentTimeMillis() - start));
+                if (user == null) {
+                    logger.info("User not found with ID: {}", id);
+                } else {
+                    putUserInfoToRedis(user);
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error accessing Redis for user ID: {} - {}", id, e.getMessage(), e);
         }
-        User user = userCollection.getUserById(id);
-        if (user == null) {
-            logger.warn("User not found with ID: {}", id);
-            throw new RuntimeException("User not found with id: " + id);
-        }
-        logger.debug("Successfully retrieved user by ID: {}", id);
+        logger.info("Successfully retrieved "+ dataFrom +" user: "+ id);
         return user;
+    }
+
+    public UserResponse getUserByUId(String id) {
+        logger.debug("Retrieving user by ID: {}", id);
+        long start = System.currentTimeMillis();
+        String dataFrom = "BY REDIS";
+        String keyRedis = RedisKey.USER_ID + id;
+        String resultRedis;
+        User user = null;
+        try {
+            resultRedis = redisService.getRedisSsoUser().opsForValue().get(keyRedis);
+            if (!StringUtils.isBlank(resultRedis)) {
+                user = gson.fromJson(resultRedis, new TypeToken<User>() {
+                }.getType());
+                logger.info("User found in Redis cache for ID: {} with time: {}", id, (System.currentTimeMillis() - start));
+            } else {
+                user = userCollection.getUserById(id);
+                dataFrom = "BY MONGO";
+                logger.info("User retrieved from MONGO for ID: {} with time: {}", id, (System.currentTimeMillis() - start));
+                if (user == null) {
+                    logger.info("User not found with ID: {}", id);
+                } else {
+                    putUserInfoToRedis(user);
+                }
+            }
+        } catch (Exception e) {
+            logger.error("Error accessing Redis for user ID: {} - {}", id, e.getMessage(), e);
+        }
+        logger.info("Successfully retrieved "+ dataFrom +" user: "+ id);
+        return userMapper.toResponse(user);
     }
 
     public User getUserFromAccessToken(String token) {
@@ -120,7 +176,7 @@ public class UserService {
         User user = null;
         try {
             user = jwtService.verifyAcessToken(token);
-            if (user != null && Long.parseLong(user.getId()) > 0) {
+            if (user != null && user.getId() != null) {
                 user = getUserById(user.getId());
                 if (user != null && !token.equals(user.getAccess_token())) {
                     logger.warn("Token mismatch for user ID: {}", user.getId());
@@ -192,11 +248,13 @@ public class UserService {
             user.setRefresh_token(refreshToken);
 
             // update database
-            if (!userCollection.updateTokenOfUser(user, expireDate)) {
+            if (userCollection.updateTokenOfUser(user, expireDate)) {
+                 redisService.deleteRedisUser(user);
+                logger.info("Successfully refreshed tokens for user: {}", user_id);
+
+            } else {
                 logger.error("Failed to update token in database for user: {}", user_id);
                 user = null;
-            } else {
-                logger.info("Successfully refreshed tokens for user: {}", user_id);
             }
 
         } catch (Exception e) {

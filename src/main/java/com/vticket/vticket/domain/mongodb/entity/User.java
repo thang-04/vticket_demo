@@ -6,7 +6,7 @@ import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import org.springframework.data.mongodb.core.mapping.Field;
 
-import java.time.LocalDate;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -34,9 +34,9 @@ public class User {
     @Field("avatar")
     private String avatar;
     @Field("created_at")
-    private LocalDate created_at;
+    private Date created_at;
     @Field("updated_at")
-    private LocalDate updated_at;
+    private Date updated_at;
     @Field("access_token")
     private String access_token;
     @Field("refresh_token")

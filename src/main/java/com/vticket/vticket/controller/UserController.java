@@ -41,7 +41,7 @@ public class UserController {
 //    }
 
     @GetMapping()
-    public ApiResponse<UserResponse> getUserById() {
+    public ApiResponse<UserResponse> getInfoUser() {
         try {
             UserResponse userrespone = userService.getMyInfo();
             return ApiResponse.<UserResponse>builder()
@@ -50,6 +50,22 @@ public class UserController {
         } catch (Exception e) {
             return ApiResponse.<UserResponse>builder()
                     .code(ErrorCode.USER_EXISTED.getCode())
+                    .message(e.getMessage())
+                    .result(null)
+                    .build();
+        }
+    }
+
+    @GetMapping("/{id}")
+    public ApiResponse<UserResponse> getUserById(@PathVariable String id) {
+        try {
+            UserResponse userrespone = userService.getUserByUId(id);
+            return ApiResponse.<UserResponse>builder()
+                    .result(userrespone)
+                    .build();
+        } catch (Exception e) {
+            return ApiResponse.<UserResponse>builder()
+                    .code(ErrorCode.USER_NOT_EXISTED.getCode())
                     .message(e.getMessage())
                     .result(null)
                     .build();

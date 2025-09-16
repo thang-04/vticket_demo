@@ -43,7 +43,7 @@ public class InsertUsersMongoProcess extends ProcessThreadMX {
                 List<User> listUsersIns = new ArrayList<>();
                 for (User user : listUsers) {
                     user.setActive(true);
-                    user.setCreated_at(LocalDate.now());
+                    user.setCreated_at(new Date());
                     listUsersIns.add(user);
                 }
 

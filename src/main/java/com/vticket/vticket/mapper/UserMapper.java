@@ -21,7 +21,7 @@ public class UserMapper {
                 .password(request.getPassword())
                 .email(request.getEmail())
                 .address(request.getAddress())
-                .created_at(LocalDate.now())
+                .created_at(new Date())
                 .isActive(true)
                 .avatar(null)
                 .build();

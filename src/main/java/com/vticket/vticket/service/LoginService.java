@@ -20,27 +20,36 @@ public class LoginService {
     private UserService userService;
 
     public AuthenticationResponse authentication(AuthenticationRequest request) {
-//        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);
         logger.info("Authenticating user: {}", request.getUsername());
+
         User user = userService.getUserByUserName(request.getUsername());
+
         boolean authenticated = user.getPassword().equals(request.getPassword());
+        if (!authenticated) {
+            logger.warn("Authentication failed for user: {}", request.getUsername());
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
 
-        if (!authenticated) throw new AppException(ErrorCode.UNAUTHENTICATED);
-        logger.warn("Authentication failed for user: {}", request.getUsername());
+        if (user.getAccess_token() != null && !user.getAccess_token().isEmpty()) {
+            User tokenValidationResult = userService.getUserFromAccessToken(user.getAccess_token());
 
-     if (user.getAccess_token() != null && !user.getAccess_token().isEmpty()) {
-         logger.info("Refreshing token for user: {}", user.getUsername());
-         user = userService.refreshToken(user.getId());
-        } else {
-            User user2 = userService.getUserFromAccessToken(user.getAccess_token());
-            if (user2 != null && Long.parseLong(user2.getId()) == Config.CODE.ERROR_CODE_103) {
+            if (tokenValidationResult != null && Long.parseLong(tokenValidationResult.getId()) != Config.CODE.ERROR_CODE_103) {
+                logger.info("Token is still valid for user: {}", request.getUsername());
+                return AuthenticationResponse.builder()
+                        .token(user.getAccess_token())
+                        .build();
+            } else {
+                logger.info("Token expired for user: {}, refreshing token", request.getUsername());
                 user = userService.refreshToken(user.getId());
             }
+        } else {
+            logger.info("No existing token for user: {}, creating new token", request.getUsername());
+            user = userService.refreshToken(user.getId());
         }
+
         return AuthenticationResponse.builder()
                 .token(user.getAccess_token())
                 .build();
-
     }
 
 }

@@ -23,6 +23,12 @@ spring:
       host: localhost
       port: 27017
 
+# Redis
+    redis:
+      host: localhost
+      port: 6379
+
+
 jwt:
   signerKey: cdOjoneRSm7ajl1RsOznZmSEYkd+6NnRN5S7fj2QtH/Rhheb6QnC8m1SGzznV75D
 
