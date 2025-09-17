@@ -12,6 +12,7 @@ import com.vticket.vticket.exception.ErrorCode;
 import com.vticket.vticket.service.JwtService;
 import com.vticket.vticket.service.LoginService;
 import com.vticket.vticket.service.UserService;
+import com.vticket.vticket.utils.ResponseJson;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,45 +35,31 @@ public class AuthenController {
     private JwtService jwtService;
 
     @PostMapping("/login")
-    public ApiResponse<AuthenticationResponse> login(@RequestBody AuthenticationRequest authenticationRequest) {
+    public String login(@RequestBody AuthenticationRequest authenticationRequest) {
         logger.info("Login attempt for username: {}", authenticationRequest.getUsername());
         try {
             var result = loginService.authentication(authenticationRequest);
             logger.info("Login successful for username: {}", authenticationRequest.getUsername());
-            return ApiResponse.<AuthenticationResponse>builder()
-                    .message("Login successful")
-                    .result(result)
-                    .build();
+            return ResponseJson.success("Login successful", result);
         } catch (Exception e) {
             logger.error("Login failed for username: {} - {}", authenticationRequest.getUsername(), e.getMessage(), e);
-            return ApiResponse.<AuthenticationResponse>builder()
-                    .code(ErrorCode.UNAUTHENTICATED.getCode())
-                    .message(e.getMessage())
-                    .result(null)
-                    .build();
+            return ResponseJson.of(ErrorCode.UNAUTHENTICATED, e.getMessage());
         }
     }
 
 @PostMapping("/introspect")
-    public ApiResponse<IntrospectResponse> verifyToken(@RequestBody IntrospectRequest intro) throws ParseException {
+    public String verifyToken(@RequestBody IntrospectRequest intro) throws ParseException {
     IntrospectResponse result = jwtService.introspect(intro);
-       return ApiResponse.<IntrospectResponse>builder()
-               .message("Token introspection successful")
-               .result(result)
-               .build();
+       return ResponseJson.success("Token introspection successful", result);
 }
 
     @PostMapping("/refresh")
-    public ApiResponse<AuthenticationResponse> refresh(@RequestBody RefreshRequest refreshRequest) {
+    public String refresh(@RequestBody RefreshRequest refreshRequest) {
         try {
             User user = userService.getUserFromRefreshToken(refreshRequest.getToken());
             if (user == null || user.getId().equals(String.valueOf(Config.CODE.ERROR_CODE_103))) {
                 logger.warn("Invalid refresh token: {}", refreshRequest.getToken());
-                return ApiResponse.<AuthenticationResponse>builder()
-                        .code(ErrorCode.UNAUTHENTICATED.getCode())
-                        .message("Invalid refresh token")
-                        .result(null)
-                        .build();
+                return ResponseJson.of(ErrorCode.UNAUTHENTICATED, "Invalid refresh token");
             } else {
                 // kiem tra xem access_token da het han hay chua
                 User userVerifyAccessToken = jwtService.verifyAcessToken(user.getAccess_token());
@@ -85,27 +72,16 @@ public class AuthenController {
                             .token(user.getAccess_token())
                             .build();
 
-                    return ApiResponse.<AuthenticationResponse>builder()
-                            .message("Token refresh successful")
-                            .result(result)
-                            .build();
+                    return ResponseJson.success("Token refresh successful", result);
                 }else{
                     logger.warn("Refresh token has not expired yet for userId: {}", user.getId());
-                    return ApiResponse.<AuthenticationResponse>builder()
-                            .code(ErrorCode.UNAUTHENTICATED.getCode())
-                            .message("Refresh token has not expired yet")
-                            .result(null)
-                            .build();
+                    return ResponseJson.of(ErrorCode.UNAUTHENTICATED, "Refresh token has not expired yet");
                 }
 
             }
         } catch (Exception e) {
             logger.error("Token refresh failed for token: {} - {}", refreshRequest.getToken(), e.getMessage(), e);
-            return ApiResponse.<AuthenticationResponse>builder()
-                    .code(ErrorCode.UNAUTHENTICATED.getCode())
-                    .message(e.getMessage())
-                    .result(null)
-                    .build();
+            return ResponseJson.of(ErrorCode.UNAUTHENTICATED, e.getMessage());
         }
     }
 
