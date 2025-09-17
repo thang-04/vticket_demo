@@ -118,9 +118,18 @@ public class JwtService {
                 logger.warn("Empty JWT token provided");
                 user = null;
             } else {
+                String cleanJwt = jwt;
+                if (jwt.startsWith("Bearer ")) {
+                    cleanJwt = jwt.substring(7);
+                }
+                // Validate JWT format
+                if (!isValidJwtFormat(cleanJwt)) {
+                    logger.error("Invalid JWT format: {}", cleanJwt);
+                    return null;
+                }
                 Claims claims = Jwts.parser()
                         .setSigningKey(DatatypeConverter.parseBase64Binary(SIGNER_KEY))
-                        .parseClaimsJws(jwt).getBody();
+                        .parseClaimsJws(cleanJwt).getBody();
                 String username = claims.get("username", String.class);
                 String access_token = claims.get("access_token", String.class);
                 String id = claims.getId();
@@ -174,6 +183,24 @@ public class JwtService {
             user = null;
         }
         return user;
+    }
+
+    private boolean isValidJwtFormat(String jwt) {
+        if (StringUtils.isEmpty(jwt)) {
+            return false;
+        }
+        String[] parts = jwt.split("\\.");
+        if (parts.length != 3) {
+            return false;
+        }
+        try {
+            for (String part : parts) {
+                DatatypeConverter.parseBase64Binary(part);
+            }
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public IntrospectResponse introspect(IntrospectRequest request) {

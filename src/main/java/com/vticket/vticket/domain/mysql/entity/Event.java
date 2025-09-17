@@ -26,5 +26,5 @@ public class Event {
     private Date created_at;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    private Category category_id;
+    private Category category;
 }

@@ -6,7 +6,7 @@ import org.springframework.http.HttpStatusCode;
 
 @Getter
 public enum ErrorCode {
-    UNCATEGORIZED_EXCEPTION(9999, "Uncategorized error", HttpStatus.INTERNAL_SERVER_ERROR),
+    ERROR_CODE_EXCEPTION(-9999, "Unknown error", HttpStatus.INTERNAL_SERVER_ERROR),
     INVALID_KEY(1001, "Uncategorized error", HttpStatus.BAD_REQUEST),
     USER_EXISTED(1002, "User existed", HttpStatus.BAD_REQUEST),
     USERNAME_INVALID(1003, "Username must be at least {min} characters", HttpStatus.BAD_REQUEST),
@@ -15,6 +15,13 @@ public enum ErrorCode {
     UNAUTHENTICATED(1006, "Unauthenticated", HttpStatus.UNAUTHORIZED),
     UNAUTHORIZED(1007, "You do not have permission", HttpStatus.FORBIDDEN),
     INVALID_DOB(1008, "Your age must be at least {min}", HttpStatus.BAD_REQUEST),
+    INVALID_EMAIL(1009, "Email is not valid", HttpStatus.BAD_REQUEST),
+    INVALID_REGISTER(1010, "Invalid register information", HttpStatus.BAD_REQUEST),
+    EXPIRED_TOKEN(1011, "Token is expired", HttpStatus.UNAUTHORIZED),
+    INVALID_TOKEN(1012, "Token is invalid", HttpStatus.UNAUTHORIZED),
+    INVALID_REFRESH_TOKEN(1013, "Refresh token is invalid", HttpStatus.UNAUTHORIZED),
+    INVALID_CLIENT(1014, "Client is invalid", HttpStatus.UNAUTHORIZED),
+    INVALID_SCOPE(1015, "Scope is invalid", HttpStatus.BAD_REQUEST)
     ;
 
     ErrorCode(int code, String message, HttpStatusCode statusCode) {

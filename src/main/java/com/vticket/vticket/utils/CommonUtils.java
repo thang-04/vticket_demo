@@ -164,5 +164,17 @@ public class CommonUtils {
         return mapResult;
     }
 
+    // Partition a list into sublists of a specified size.
+    public static <T> List<List<T>> partition(List<T> list, int size) {
+        if (list == null) {
+            throw new NullPointerException(
+                    "'list' must not be null");
+        }
+        if (!(size > 0)) {
+            throw new IllegalArgumentException(
+                    "'size' must be greater than 0");
+        }
+        return new Partition<>(list, size);
+    }
 
 }

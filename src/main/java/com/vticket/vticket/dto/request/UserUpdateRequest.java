@@ -11,8 +11,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UserCreationRequest {
-
+public class UserUpdateRequest {
     @NotNull(message = "First name cannot be null")
     private String firstName;
 
@@ -22,13 +21,8 @@ public class UserCreationRequest {
     @NotNull(message = "Username cannot be null")
     private String username;
 
-    @NotNull(message = "Password cannot be null")
-    private String password;
-
-    @Email(message = "Email should be valid")
-    @NotNull(message = "Email cannot be null")
-    private String email;
-
     @NotNull(message = "Address cannot be null")
     private String address;
+
+    private String avatar;
 }

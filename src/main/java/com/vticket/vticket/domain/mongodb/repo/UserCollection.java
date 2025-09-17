@@ -2,6 +2,7 @@ package com.vticket.vticket.domain.mongodb.repo;
 
 import com.vticket.vticket.domain.mongodb.entity.User;
 import com.vticket.vticket.dto.request.UserCreationRequest;
+import com.vticket.vticket.dto.request.UserUpdateRequest;
 import com.vticket.vticket.service.UserService;
 import io.micrometer.common.util.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -17,6 +18,8 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Date;
 import java.util.List;
+
+import static com.vticket.vticket.utils.CommonUtils.gson;
 
 @Repository
 public class UserCollection {
@@ -72,7 +75,7 @@ public class UserCollection {
         try {
             String userId = users.getId();
             if (StringUtils.isNotEmpty(userId)) {
-                Query query = new Query(Criteria.where("id").is(userId));
+                Query query = new Query(Criteria.where("_id").is(userId));
                 Update update = new Update();
                 if (users.getAccess_token() != null) {
                     update.set("access_token", users.getAccess_token());
@@ -87,6 +90,70 @@ public class UserCollection {
             }
         } catch (Exception e) {
             logger.error("updateTokenOfUser|users={}|Exception={}", users, e.getMessage(), e);
+        }
+        return response;
+    }
+
+    public boolean updateUserInfo(String userId, UserUpdateRequest req) {
+        String logPrefix = "[updateProfile]|profile=" + gson.toJson(req);
+        try {
+            Query query = new Query();
+            query.addCriteria(Criteria.where("_id").is(userId));
+            Update update = new Update();
+            if (StringUtils.isNotEmpty(req.getUsername())) {
+                update.set("username", req.getUsername());
+            }
+            String fullName = "";
+            if (StringUtils.isNotEmpty(req.getFirstName())) {
+                fullName += req.getFirstName();
+            }
+            if (StringUtils.isNotEmpty(req.getLastName())) {
+                if (!fullName.isEmpty()) {
+                    fullName += " ";
+                }
+                fullName += req.getLastName();
+            }
+            if (StringUtils.isNotEmpty(fullName)) {
+                update.set("full_name", fullName);
+            }
+            if (StringUtils.isNotEmpty(req.getAddress())) {
+                update.set("address", req.getAddress());
+            }
+            if (StringUtils.isNotEmpty(req.getAvatar())) {
+                update.set("avatar", req.getAvatar());
+            }
+            update.set("updated_at", new Date());
+            mongoTemplate.updateFirst(query, update, "users");
+            logger.info("{}|Profile updated successfully in 'users'", logPrefix);
+            return true;
+        } catch (Exception e) {
+            logger.error("{}|Exception={}", logPrefix, e.getMessage(), e);
+            return false;
+        }
+    }
+
+    public boolean updateUserDeleteAccount(String userId, String username, String email) {
+        logger.info("deleteAccount|userId={}|username={}|email={}", userId, username, email);
+        boolean response = false;
+        try {
+            if (StringUtils.isNotEmpty(userId)) {
+                Query query = new Query(Criteria.where("_id").is(userId));
+                Update update = new Update();
+
+                if (StringUtils.isNotEmpty(email)) {
+                    update.set("email", email);
+                }
+
+                if (StringUtils.isNotEmpty(username)) {
+                    update.set("username", username);
+                }
+                update.set("status", false);
+                update.set("updated_at", new Date());
+                mongoTemplate.updateFirst(query, update, User.class);
+                response = true;
+            }
+        } catch (Exception e) {
+            logger.error("deleteAccount|userId={}|Exception={}", userId, e.getMessage(), e);
         }
         return response;
     }

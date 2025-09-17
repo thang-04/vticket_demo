@@ -5,6 +5,7 @@ import com.vticket.vticket.config.RedisKey;
 import com.vticket.vticket.domain.mongodb.entity.User;
 import com.vticket.vticket.domain.mongodb.repo.UserCollection;
 import com.vticket.vticket.dto.request.UserCreationRequest;
+import com.vticket.vticket.dto.request.UserUpdateRequest;
 import com.vticket.vticket.dto.response.UserResponse;
 import com.vticket.vticket.exception.AppException;
 import com.vticket.vticket.exception.ErrorCode;
@@ -41,39 +42,47 @@ public class UserService {
     private JwtService jwtService;
     @Autowired
     private RedisService redisService;
+    @Autowired
+    private RegistrationService registrationService;
 
 
-    public UserResponse createUser(UserCreationRequest userCreationRequest) {
+    public UserResponse createNewUser(UserCreationRequest userCreationRequest) {
         logger.info("Creating new user with username: {}", userCreationRequest.getUsername());
         long start = System.currentTimeMillis();
 
         try {
             if (userCollection.getUserInfoByUserName(userCreationRequest.getUsername()) != null) {
                 logger.warn("Username already exists: {}", userCreationRequest.getUsername());
-            }
-            User user = userMapper.toEntity(userCreationRequest);
-            user.setPassword(passwordEncoder.encode(userCreationRequest.getPassword()));
+            } else {
+                User user = userMapper.toEntity(userCreationRequest);
+                user.setPassword(passwordEncoder.encode(userCreationRequest.getPassword()));
 
-            Date expireDate = new Date(System.currentTimeMillis() + 60 * 1000);
-            Date expireDateRefresh = new Date(System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000);
+                Date expireDate = new Date(System.currentTimeMillis() + 60 * 1000);
+                Date expireDateRefresh = new Date(System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000);
 
-            String accessToken = jwtService.generateToken(user, expireDate);//15 ngày
-            user.setAccess_token(accessToken);
+                String accessToken = jwtService.generateToken(user, expireDate);//15 ngày
+                user.setAccess_token(accessToken);
 
-            String refreshToken = jwtService.generateToken(user, expireDateRefresh);//30 ngày
-            user.setRefresh_token(refreshToken);
+                String refreshToken = jwtService.generateToken(user, expireDateRefresh);//30 ngày
+                user.setRefresh_token(refreshToken);
 
 //            processUserService.enQueueUser(user);
 
-            // add user to mongo
-            User savedUser = userCollection.insertUser(user);
-            logger.info("Successfully created user: {} with time: {} and ID: {}", userCreationRequest.getUsername(), (System.currentTimeMillis() - start), savedUser.getId());
-            // add user to redis
-            putUserInfoToRedis(savedUser);
-            return userMapper.toResponse(savedUser);
+                // send otp
+                if (registrationService.sendRegistrationOtp(user)) {
+                    // add user to mongo
+                    User savedUser = userCollection.insertUser(user);
+                    logger.info("Successfully created user: {} with ID: {} and time: {}", userCreationRequest.getUsername(), savedUser.getId(), (System.currentTimeMillis() - start));
+                    // add user to redis
+                    putUserInfoToRedis(savedUser);
+
+                    return userMapper.toResponse(savedUser);
+                }
+            }
         } catch (Exception e) {
             logger.error("Error creating user: {} - {}", userCreationRequest.getUsername(), e.getMessage(), e);
         }
+        logger.info("Failed to create user: {} with time: {}", userCreationRequest.getUsername(), (System.currentTimeMillis() - start));
         return null;
     }
 
@@ -124,12 +133,12 @@ public class UserService {
             if (!StringUtils.isBlank(resultRedis)) {
                 user = gson.fromJson(resultRedis, new TypeToken<User>() {
                 }.getType());
-                logger.info("User found in Redis cache for ID: {} with time: {}", id, (System.currentTimeMillis() - start));
+                logger.info("User found in Redis cache  : {} with time: {}", user, (System.currentTimeMillis() - start));
             } else {
                 // get in mongo
                 user = userCollection.getUserById(id);
                 dataFrom = "BY MONGO";
-                logger.info("User retrieved from MONGO for ID: {} with time: {}", id, (System.currentTimeMillis() - start));
+                logger.info("User retrieved from MONGO  : {} with time: {}", user, (System.currentTimeMillis() - start));
                 if (user == null) {
                     logger.info("User not found with ID: {}", id);
                 } else {
@@ -156,12 +165,12 @@ public class UserService {
             if (!StringUtils.isBlank(resultRedis)) {
                 user = gson.fromJson(resultRedis, new TypeToken<User>() {
                 }.getType());
-                logger.info("User found in Redis cache for ID: {} with time: {}", id, (System.currentTimeMillis() - start));
+                logger.info("User found in Redis cache for : {} with time: {}", user, (System.currentTimeMillis() - start));
             } else {
                 // get in mongo
                 user = userCollection.getUserById(id);
                 dataFrom = "BY MONGO";
-                logger.info("User retrieved from MONGO for ID: {} with time: {}", id, (System.currentTimeMillis() - start));
+                logger.info("User retrieved from MONGO for : {} with time: {}", user, (System.currentTimeMillis() - start));
                 if (user == null) {
                     logger.info("User not found with ID: {}", id);
                 } else {
@@ -281,5 +290,42 @@ public class UserService {
         }
 
         return userMapper.toResponse(user);
+    }
+
+    public boolean updateUserProfile(String userId, UserUpdateRequest req){
+        return userCollection.updateUserInfo(userId, req);
+    }
+
+    public boolean deleteUserAccount(User user) {
+        boolean result = false;
+        long start = System.currentTimeMillis();
+        String key = "";
+        try {
+            logger.info("|deleteUserAccount| START User =" + user.getId());
+
+            String userName = user.getUsername();
+            if (StringUtils.isNotEmpty(userName)) {
+                key = RedisKey.USER_TYPE_LOGIN + ":" + user.getUsername();
+                userName = userName + "_del_" + start;
+                redisService.getRedisSsoUser().delete(key);
+            }
+
+            String email = user.getEmail();
+            if (StringUtils.isNotEmpty(email)) {
+                key = RedisKey.USER_TYPE_LOGIN + ":" + email;
+                email = email + "_del_" + start;
+                redisService.getRedisSsoUser().delete(key);
+            }
+
+            boolean resultUpdate = userCollection.updateUserDeleteAccount(user.getId(), userName, email);
+            if (resultUpdate) {
+                result = true;
+                redisService.getRedisSsoUser().delete(key);
+            }
+        } catch (Exception e) {
+            logger.error("|deleteUserAccount|" + e.getMessage(), e);
+        }
+        logger.info("|deleteUserAccount|" + (System.currentTimeMillis() - start) + "ms");
+        return result;
     }
 }

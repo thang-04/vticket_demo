@@ -6,6 +6,9 @@ import java.util.Map;
 import javax.crypto.spec.SecretKeySpec;
 import javax.xml.bind.DatatypeConverter;
 
+import com.vticket.vticket.service.JwtService;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
@@ -19,6 +22,8 @@ import org.springframework.stereotype.Component;
 
 @Component
 public class CustomJwtDecoder implements JwtDecoder {
+
+    private static final Logger logger = LogManager.getLogger(CustomJwtDecoder.class);
 
     @Value("${jwt.signerKey}")
     private String signerKey;
@@ -35,13 +40,14 @@ public class CustomJwtDecoder implements JwtDecoder {
 
             // check expiration token
             if (claims.getExpiration().before(new Date())) {
-                throw new JwtException("Token expired");
+                logger.info("Jwt token expired");
             }
 
             return createJwt(token, claims);
 
         } catch (Exception e) {
-            throw new JwtException("Invalid token: " + e.getMessage());
+           logger.warn("Failed to decode JWT token: " + e.getMessage(), e);
+              throw new JwtException("Invalid JWT token", e);
         }
     }
 

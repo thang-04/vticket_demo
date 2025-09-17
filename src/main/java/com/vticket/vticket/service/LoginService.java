@@ -3,7 +3,6 @@ package com.vticket.vticket.service;
 import com.vticket.vticket.config.Config;
 import com.vticket.vticket.domain.mongodb.entity.User;
 import com.vticket.vticket.dto.request.AuthenticationRequest;
-import com.vticket.vticket.dto.request.UserCreationRequest;
 import com.vticket.vticket.dto.response.AuthenticationResponse;
 import com.vticket.vticket.exception.AppException;
 import com.vticket.vticket.exception.ErrorCode;
@@ -30,7 +29,7 @@ public class LoginService {
         logger.info("Authenticating user: {}", request.getUsername());
 
         User user = userService.getUserByUserName(request.getUsername());
-        boolean authenticated = passwordEncoder.matches(user.getPassword(), request.getPassword());
+        boolean authenticated = passwordEncoder.matches(request.getPassword(), user.getPassword());
         if (!authenticated) {
             logger.warn("Authentication failed for user: {}", request.getUsername());
             throw new AppException(ErrorCode.UNAUTHENTICATED);
