@@ -3,13 +3,17 @@ package com.vticket.vticket.service;
 import com.vticket.vticket.config.Config;
 import com.vticket.vticket.domain.mongodb.entity.User;
 import com.vticket.vticket.dto.request.AuthenticationRequest;
+import com.vticket.vticket.dto.request.UserCreationRequest;
 import com.vticket.vticket.dto.response.AuthenticationResponse;
 import com.vticket.vticket.exception.AppException;
 import com.vticket.vticket.exception.ErrorCode;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.util.Objects;
 
 @Service
 public class LoginService {
@@ -19,26 +23,29 @@ public class LoginService {
     @Autowired
     private UserService userService;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     public AuthenticationResponse authentication(AuthenticationRequest request) {
         logger.info("Authenticating user: {}", request.getUsername());
 
         User user = userService.getUserByUserName(request.getUsername());
-
-        boolean authenticated = user.getPassword().equals(request.getPassword());
+        boolean authenticated = passwordEncoder.matches(user.getPassword(), request.getPassword());
         if (!authenticated) {
             logger.warn("Authentication failed for user: {}", request.getUsername());
             throw new AppException(ErrorCode.UNAUTHENTICATED);
         }
-
+        // Check if the user already has a valid token
         if (user.getAccess_token() != null && !user.getAccess_token().isEmpty()) {
             User tokenValidationResult = userService.getUserFromAccessToken(user.getAccess_token());
 
-            if (tokenValidationResult != null && Long.parseLong(tokenValidationResult.getId()) != Config.CODE.ERROR_CODE_103) {
+            if (tokenValidationResult != null && !Objects.equals(tokenValidationResult.getId(), String.valueOf(Config.CODE.ERROR_CODE_103))) {
                 logger.info("Token is still valid for user: {}", request.getUsername());
                 return AuthenticationResponse.builder()
                         .token(user.getAccess_token())
                         .build();
             } else {
+                // Token is expired or invalid
                 logger.info("Token expired for user: {}, refreshing token", request.getUsername());
                 user = userService.refreshToken(user.getId());
             }
@@ -51,5 +58,6 @@ public class LoginService {
                 .token(user.getAccess_token())
                 .build();
     }
+
 
 }

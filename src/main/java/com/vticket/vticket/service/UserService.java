@@ -15,6 +15,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
@@ -32,8 +33,8 @@ public class UserService {
     private UserCollection userCollection;
     @Autowired
     private UserMapper userMapper;
-    //    @Autowired
-//    PasswordEncoder passwordEncoder;
+    @Autowired
+    PasswordEncoder passwordEncoder;
     @Autowired
     private ProcessUserService processUserService;
     @Autowired
@@ -51,9 +52,9 @@ public class UserService {
                 logger.warn("Username already exists: {}", userCreationRequest.getUsername());
             }
             User user = userMapper.toEntity(userCreationRequest);
-            user.setPassword(userCreationRequest.getPassword());
+            user.setPassword(passwordEncoder.encode(userCreationRequest.getPassword()));
 
-            Date expireDate = new Date(System.currentTimeMillis() + 100000);
+            Date expireDate = new Date(System.currentTimeMillis() + 60 * 1000);
             Date expireDateRefresh = new Date(System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000);
 
             String accessToken = jwtService.generateToken(user, expireDate);//15 ngày
@@ -63,21 +64,24 @@ public class UserService {
             user.setRefresh_token(refreshToken);
 
 //            processUserService.enQueueUser(user);
-            User savedUser = userCollection.insertUser(user);
 
+            // add user to mongo
+            User savedUser = userCollection.insertUser(user);
             logger.info("Successfully created user: {} with time: {} and ID: {}", userCreationRequest.getUsername(), (System.currentTimeMillis() - start), savedUser.getId());
+            // add user to redis
             putUserInfoToRedis(savedUser);
             return userMapper.toResponse(savedUser);
-
         } catch (Exception e) {
             logger.error("Error creating user: {} - {}", userCreationRequest.getUsername(), e.getMessage(), e);
-            throw e;
         }
+        return null;
     }
 
     public void putUserInfoToRedis(User user) {
         String keyRedis = RedisKey.USER_ID + user.getId();
+        //add user to redis
         redisService.getRedisSsoUser().opsForValue().set(keyRedis, gson.toJson(user));
+        //set time expire 30p
         redisService.getRedisSsoUser().expire(keyRedis, 30L, TimeUnit.MINUTES);
     }
 
@@ -115,12 +119,14 @@ public class UserService {
         String resultRedis;
         User user = null;
         try {
+            // check in redis
             resultRedis = redisService.getRedisSsoUser().opsForValue().get(keyRedis);
             if (!StringUtils.isBlank(resultRedis)) {
                 user = gson.fromJson(resultRedis, new TypeToken<User>() {
                 }.getType());
                 logger.info("User found in Redis cache for ID: {} with time: {}", id, (System.currentTimeMillis() - start));
             } else {
+                // get in mongo
                 user = userCollection.getUserById(id);
                 dataFrom = "BY MONGO";
                 logger.info("User retrieved from MONGO for ID: {} with time: {}", id, (System.currentTimeMillis() - start));
@@ -133,7 +139,7 @@ public class UserService {
         } catch (Exception e) {
             logger.error("Error accessing Redis for user ID: {} - {}", id, e.getMessage(), e);
         }
-        logger.info("Successfully retrieved "+ dataFrom +" user: "+ id);
+        logger.info("Successfully retrieved " + dataFrom + " user: " + id);
         return user;
     }
 
@@ -145,12 +151,14 @@ public class UserService {
         String resultRedis;
         User user = null;
         try {
+            // check in redis
             resultRedis = redisService.getRedisSsoUser().opsForValue().get(keyRedis);
             if (!StringUtils.isBlank(resultRedis)) {
                 user = gson.fromJson(resultRedis, new TypeToken<User>() {
                 }.getType());
                 logger.info("User found in Redis cache for ID: {} with time: {}", id, (System.currentTimeMillis() - start));
             } else {
+                // get in mongo
                 user = userCollection.getUserById(id);
                 dataFrom = "BY MONGO";
                 logger.info("User retrieved from MONGO for ID: {} with time: {}", id, (System.currentTimeMillis() - start));
@@ -163,7 +171,7 @@ public class UserService {
         } catch (Exception e) {
             logger.error("Error accessing Redis for user ID: {} - {}", id, e.getMessage(), e);
         }
-        logger.info("Successfully retrieved "+ dataFrom +" user: "+ id);
+        logger.info("Successfully retrieved " + dataFrom + " user: " + id);
         return userMapper.toResponse(user);
     }
 
@@ -171,7 +179,6 @@ public class UserService {
         logger.debug("Retrieving user from access token");
         if (StringUtils.isBlank(token)) {
             logger.warn("Access token is blank or null");
-            throw new RuntimeException("Access Token is required");
         }
         User user = null;
         try {
@@ -196,7 +203,6 @@ public class UserService {
         logger.debug("Retrieving user from refresh token");
         if (StringUtils.isBlank(token)) {
             logger.warn("Refresh token is blank or null");
-            throw new RuntimeException("Refresh Token is required");
         }
 
         User user = null;
@@ -233,12 +239,12 @@ public class UserService {
                     oldAccessToken != null ? "***" + oldAccessToken.substring(Math.max(0, oldAccessToken.length() - 4)) : "null",
                     oldRefreshToken != null ? "***" + oldRefreshToken.substring(Math.max(0, oldRefreshToken.length() - 4)) : "null");
 
-            // Invalidate  old_token
+            // Invalidate old_token
             user.setAccess_token("");
             user.setRefresh_token("");
 
-            // Tạo token mới
-            Date expireDate = new Date(System.currentTimeMillis() + 100000);
+            // Create new token
+            Date expireDate = new Date(System.currentTimeMillis() + 60 * 1000);
             Date expireDateRefresh = new Date(System.currentTimeMillis() + 30L * 24 * 60 * 60 * 1000);
 
             String accessToken = jwtService.generateToken(user, expireDate);//15 ngày
@@ -247,9 +253,9 @@ public class UserService {
             String refreshToken = jwtService.generateToken(user, expireDateRefresh);//30 ngày
             user.setRefresh_token(refreshToken);
 
-            // update database
+            // update mongoDB
             if (userCollection.updateTokenOfUser(user, expireDate)) {
-                 redisService.deleteRedisUser(user);
+                redisService.deleteRedisUser(user);
                 logger.info("Successfully refreshed tokens for user: {}", user_id);
 
             } else {
