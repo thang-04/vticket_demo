@@ -1,0 +1,548 @@
+"use client"
+
+import { useState } from "react"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { useToast } from "@/hooks/use-toast"
+import { Phone, Mail, Calendar, MapPin, Ticket, Settings, LogOut, Edit3, Trash2, Save, X } from "lucide-react"
+
+export function UserProfile() {
+  const [user, setUser] = useState({
+    name: "Nguyễn Văn An",
+    phone: "+84 987 654 321",
+    email: "nguyenvanan@email.com",
+    joinDate: "Tháng 3, 2024",
+    location: "Hồ Chí Minh, Việt Nam",
+    avatar: "/diverse-user-avatars.png",
+    totalTickets: 12,
+    upcomingEvents: 3,
+  })
+
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const [editForm, setEditForm] = useState({
+    name: user.name,
+    phone: user.phone,
+    email: user.email,
+    location: user.location,
+  })
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  })
+
+  const { toast } = useToast()
+
+  const recentTickets = [
+    {
+      id: 1,
+      event: "Sơn Tùng M-TP Concert 2024",
+      date: "15/12/2024",
+      venue: "Sân vận động Mỹ Đình",
+      status: "confirmed",
+      price: "1,500,000 VNĐ",
+    },
+    {
+      id: 2,
+      event: "Đen Vâu Live Show",
+      date: "28/11/2024",
+      venue: "Nhà hát Hòa Bình",
+      status: "confirmed",
+      price: "800,000 VNĐ",
+    },
+    {
+      id: 3,
+      event: "Hòa Minzy Fan Meeting",
+      date: "05/11/2024",
+      venue: "Trung tâm Hội nghị Quốc gia",
+      status: "used",
+      price: "600,000 VNĐ",
+    },
+  ]
+
+  const handleUpdateProfile = async () => {
+    setIsLoading(true)
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+
+      setUser((prev) => ({
+        ...prev,
+        name: editForm.name,
+        phone: editForm.phone,
+        email: editForm.email,
+        location: editForm.location,
+      }))
+
+      setEditDialogOpen(false)
+      toast({
+        title: "Cập nhật thành công",
+        description: "Thông tin cá nhân đã được cập nhật.",
+      })
+    } catch (error) {
+      toast({
+        title: "Lỗi cập nhật",
+        description: "Không thể cập nhật thông tin. Vui lòng thử lại.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleChangePassword = async () => {
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast({
+        title: "Lỗi xác nhận",
+        description: "Mật khẩu mới và xác nhận mật khẩu không khớp.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      toast({
+        title: "Mật khẩu không hợp lệ",
+        description: "Mật khẩu mới phải có ít nhất 6 ký tự.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsLoading(true)
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 1500))
+
+      setPasswordDialogOpen(false)
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" })
+      toast({
+        title: "Đổi mật khẩu thành công",
+        description: "Mật khẩu của bạn đã được cập nhật.",
+      })
+    } catch (error) {
+      toast({
+        title: "Lỗi đổi mật khẩu",
+        description: "Không thể đổi mật khẩu. Vui lòng kiểm tra mật khẩu hiện tại.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  const handleDeleteAccount = async () => {
+    setIsLoading(true)
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+
+      toast({
+        title: "Tài khoản đã được xóa",
+        description: "Tài khoản của bạn đã được xóa thành công. Bạn sẽ được chuyển hướng về trang chủ.",
+      })
+
+      // Simulate redirect to home page
+      setTimeout(() => {
+        window.location.href = "/"
+      }, 2000)
+    } catch (error) {
+      toast({
+        title: "Lỗi xóa tài khoản",
+        description: "Không thể xóa tài khoản. Vui lòng thử lại sau.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+      setDeleteDialogOpen(false)
+    }
+  }
+
+  const handleLogout = () => {
+    console.log("[v0] User logout initiated")
+  }
+
+  const openEditDialog = () => {
+    setEditForm({
+      name: user.name,
+      phone: user.phone,
+      email: user.email,
+      location: user.location,
+    })
+    setEditDialogOpen(true)
+  }
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <div className="border-b border-border bg-card">
+        <div className="container mx-auto px-4 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-primary rounded flex items-center justify-center font-bold text-white text-lg">
+                V
+              </div>
+              <span className="text-2xl font-bold text-foreground">ticket</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLogout}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Đăng xuất
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="grid gap-6 md:grid-cols-3">
+          {/* Profile Card */}
+          <div className="md:col-span-1">
+            <Card className="bg-card border-border">
+              <CardHeader className="text-center">
+                <Avatar className="w-24 h-24 mx-auto mb-4">
+                  <AvatarImage src={user.avatar || "/placeholder.svg"} alt={user.name} />
+                  <AvatarFallback className="bg-primary text-primary-foreground text-2xl">
+                    {user.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
+                  </AvatarFallback>
+                </Avatar>
+                <CardTitle className="text-xl text-card-foreground">{user.name}</CardTitle>
+                <p className="text-muted-foreground">Thành viên từ {user.joinDate}</p>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center gap-3 text-sm">
+                  <Phone className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-card-foreground">{user.phone}</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <Mail className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-card-foreground">{user.email}</span>
+                </div>
+                <div className="flex items-center gap-3 text-sm">
+                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-card-foreground">{user.location}</span>
+                </div>
+
+                <Separator className="bg-border" />
+
+                <div className="grid grid-cols-2 gap-4 text-center">
+                  <div>
+                    <div className="text-2xl font-bold text-primary">{user.totalTickets}</div>
+                    <div className="text-xs text-muted-foreground">Tổng vé</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-secondary">{user.upcomingEvents}</div>
+                    <div className="text-xs text-muted-foreground">Sự kiện sắp tới</div>
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-4">
+                  <Button
+                    className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+                    onClick={openEditDialog}
+                  >
+                    <Edit3 className="w-4 h-4 mr-2" />
+                    Chỉnh sửa thông tin
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Tickets & Activity */}
+          <div className="md:col-span-2 space-y-6">
+            {/* Stats Cards */}
+            <div className="grid grid-cols-2 gap-4">
+              <Card className="bg-card border-border">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-primary/10 rounded-lg flex items-center justify-center">
+                      <Ticket className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-card-foreground">{user.totalTickets}</div>
+                      <div className="text-sm text-muted-foreground">Vé đã mua</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-card border-border">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-secondary/10 rounded-lg flex items-center justify-center">
+                      <Calendar className="w-6 h-6 text-secondary" />
+                    </div>
+                    <div>
+                      <div className="text-2xl font-bold text-card-foreground">{user.upcomingEvents}</div>
+                      <div className="text-sm text-muted-foreground">Sự kiện sắp tới</div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Recent Tickets */}
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="text-card-foreground flex items-center gap-2">
+                  <Ticket className="w-5 h-5" />
+                  Vé gần đây
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {recentTickets.map((ticket) => (
+                  <div
+                    key={ticket.id}
+                    className="flex items-center justify-between p-4 rounded-lg bg-muted/50 border border-border"
+                  >
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-card-foreground">{ticket.event}</h4>
+                      <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-3 h-3" />
+                          {ticket.date}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <MapPin className="w-3 h-3" />
+                          {ticket.venue}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="font-semibold text-card-foreground">{ticket.price}</div>
+                      <Badge
+                        variant={ticket.status === "confirmed" ? "default" : "secondary"}
+                        className={ticket.status === "confirmed" ? "bg-primary text-primary-foreground" : ""}
+                      >
+                        {ticket.status === "confirmed" ? "Đã xác nhận" : "Đã sử dụng"}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+
+            {/* Account Actions */}
+            <Card className="bg-card border-border">
+              <CardHeader>
+                <CardTitle className="text-card-foreground">Bảo mật & Tài khoản</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button
+                  variant="outline"
+                  className="w-full justify-start border-border text-card-foreground hover:bg-accent bg-transparent"
+                  onClick={() => setPasswordDialogOpen(true)}
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  Thay đổi mật khẩu
+                </Button>
+                <Separator className="bg-border" />
+                <Button
+                  variant="outline"
+                  className="w-full justify-start border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground bg-transparent"
+                  onClick={() => setDeleteDialogOpen(true)}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Xóa tài khoản
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="bg-card border-border text-card-foreground">
+          <DialogHeader>
+            <DialogTitle>Chỉnh sửa thông tin cá nhân</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Cập nhật thông tin cá nhân của bạn tại đây.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Họ và tên</Label>
+              <Input
+                id="name"
+                value={editForm.name}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
+                className="bg-input border-border text-foreground"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Số điện thoại</Label>
+              <Input
+                id="phone"
+                value={editForm.phone}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, phone: e.target.value }))}
+                className="bg-input border-border text-foreground"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={editForm.email}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, email: e.target.value }))}
+                className="bg-input border-border text-foreground"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="location">Địa chỉ</Label>
+              <Input
+                id="location"
+                value={editForm.location}
+                onChange={(e) => setEditForm((prev) => ({ ...prev, location: e.target.value }))}
+                className="bg-input border-border text-foreground"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditDialogOpen(false)}
+              disabled={isLoading}
+              className="border-border text-card-foreground hover:bg-accent bg-transparent"
+            >
+              <X className="w-4 h-4 mr-2" />
+              Hủy
+            </Button>
+            <Button
+              onClick={handleUpdateProfile}
+              disabled={isLoading}
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {isLoading ? "Đang lưu..." : "Lưu thay đổi"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={passwordDialogOpen} onOpenChange={setPasswordDialogOpen}>
+        <DialogContent className="bg-card border-border text-card-foreground">
+          <DialogHeader>
+            <DialogTitle>Thay đổi mật khẩu</DialogTitle>
+            <DialogDescription className="text-muted-foreground">
+              Nhập mật khẩu hiện tại và mật khẩu mới để thay đổi.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="currentPassword">Mật khẩu hiện tại</Label>
+              <Input
+                id="currentPassword"
+                type="password"
+                value={passwordForm.currentPassword}
+                onChange={(e) => setPasswordForm((prev) => ({ ...prev, currentPassword: e.target.value }))}
+                className="bg-input border-border text-foreground"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="newPassword">Mật khẩu mới</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                value={passwordForm.newPassword}
+                onChange={(e) => setPasswordForm((prev) => ({ ...prev, newPassword: e.target.value }))}
+                className="bg-input border-border text-foreground"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Xác nhận mật khẩu mới</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={passwordForm.confirmPassword}
+                onChange={(e) => setPasswordForm((prev) => ({ ...prev, confirmPassword: e.target.value }))}
+                className="bg-input border-border text-foreground"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setPasswordDialogOpen(false)
+                setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" })
+              }}
+              disabled={isLoading}
+              className="border-border text-card-foreground hover:bg-accent bg-transparent"
+            >
+              <X className="w-4 h-4 mr-2" />
+              Hủy
+            </Button>
+            <Button
+              onClick={handleChangePassword}
+              disabled={
+                isLoading || !passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword
+              }
+              className="bg-primary hover:bg-primary/90 text-primary-foreground"
+            >
+              <Save className="w-4 h-4 mr-2" />
+              {isLoading ? "Đang cập nhật..." : "Đổi mật khẩu"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent className="bg-card border-border text-card-foreground">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-destructive">Xóa tài khoản</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground">
+              Bạn có chắc chắn muốn xóa tài khoản không? Hành động này không thể hoàn tác và tất cả dữ liệu của bạn sẽ
+              bị xóa vĩnh viễn.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={isLoading}
+              className="border-border text-card-foreground hover:bg-accent bg-transparent"
+            >
+              Hủy
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteAccount}
+              disabled={isLoading}
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+            >
+              {isLoading ? "Đang xóa..." : "Xóa tài khoản"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  )
+}
