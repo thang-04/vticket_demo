@@ -8,7 +8,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/vticket_test
     driverClassName: "com.mysql.cj.jdbc.Driver"
-    password: 12345
+    password: ${DB_PASSWORD:root}
     username: root
   jpa:
     hibernate:
@@ -30,8 +30,8 @@ spring:
   mail:
     host: ${MAIL_HOST:smtp.gmail.com}
     port: ${MAIL_PORT:587}
-    username: ndthang1704@gmail.com
-    password: zxbv ztze whlc dkgc
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
     properties:
       mail:
         smtp:
@@ -42,11 +42,11 @@ spring:
 
 app:
   mail:
-    from: ndthang1704@gmail.com
+    from: ${MAIL_FROM}
 
 # JWT
 jwt:
-  signerKey: cdOjoneRSm7ajl1RsOznZmSEYkd+6NnRN5S7fj2QtH/Rhheb6QnC8m1SGzznV75D
+  signerKey: ${JWT_SIGNER_KEY:your-256-bit-secret}
 
 # Logging
 logging:

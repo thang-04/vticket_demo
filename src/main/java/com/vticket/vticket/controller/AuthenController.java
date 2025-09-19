@@ -4,12 +4,14 @@ import com.vticket.vticket.config.Config;
 import com.vticket.vticket.domain.mongodb.entity.User;
 import com.vticket.vticket.dto.request.AuthenticationRequest;
 import com.vticket.vticket.dto.request.IntrospectRequest;
+import com.vticket.vticket.dto.request.OtpVerifyRequest;
 import com.vticket.vticket.dto.request.RefreshRequest;
 import com.vticket.vticket.dto.response.AuthenticationResponse;
 import com.vticket.vticket.dto.response.IntrospectResponse;
 import com.vticket.vticket.exception.ErrorCode;
 import com.vticket.vticket.service.JwtService;
 import com.vticket.vticket.service.LoginService;
+import com.vticket.vticket.service.RegistrationService;
 import com.vticket.vticket.service.UserService;
 import com.vticket.vticket.utils.ResponseJson;
 import org.apache.logging.log4j.LogManager;
@@ -32,6 +34,8 @@ public class AuthenController {
     private UserService userService;
     @Autowired
     private JwtService jwtService;
+    @Autowired
+    private RegistrationService registrationService;
 
     @PostMapping("/login")
     public String login(@RequestBody AuthenticationRequest authenticationRequest) {
@@ -46,11 +50,28 @@ public class AuthenController {
         }
     }
 
-@PostMapping("/introspect")
+    @PostMapping("log")
+
+    @PostMapping("/verify-otp")
+    public String register(@RequestBody OtpVerifyRequest request) {
+        try {
+            boolean isVerified = registrationService.verifyOtp(request);
+            if (isVerified) {
+                return ResponseJson.success("OTP verification successful", null);
+            } else {
+                return ResponseJson.of(ErrorCode.INVALID_OTP, "Invalid OTP");
+            }
+        } catch (Exception e) {
+            return ResponseJson.of(ErrorCode.INVALID_OTP, e.getMessage());
+        }
+    }
+
+
+    @PostMapping("/introspect")
     public String verifyToken(@RequestBody IntrospectRequest intro) throws ParseException {
-    IntrospectResponse result = jwtService.introspect(intro);
-       return ResponseJson.success("Token introspection successful", result);
-}
+        IntrospectResponse result = jwtService.introspect(intro);
+        return ResponseJson.success("Token introspection successful", result);
+    }
 
     @PostMapping("/refresh")
     public String refresh(@RequestBody RefreshRequest refreshRequest) {
@@ -72,7 +93,7 @@ public class AuthenController {
                             .build();
 
                     return ResponseJson.success("Token refresh successful", result);
-                }else{
+                } else {
                     logger.warn("Refresh token has not expired yet for userId: {}", user.getId());
                     return ResponseJson.of(ErrorCode.UNAUTHENTICATED, "Refresh token has not expired yet");
                 }

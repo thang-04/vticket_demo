@@ -29,6 +29,5 @@ public class UserCreationRequest {
     @NotNull(message = "Email cannot be null")
     private String email;
 
-    @NotNull(message = "Address cannot be null")
     private String address;
 }

@@ -33,9 +33,6 @@ public class UserController {
     @Autowired
     private RedisService redisService;
 
-    @Autowired
-    private RegistrationService registrationService;
-
 
     @PostMapping()
     public String createUser(@RequestBody @Valid UserCreationRequest user, BindingResult bindingResult) {
@@ -138,20 +135,6 @@ public class UserController {
         } catch (Exception e) {
             logger.error("Exception during user update: ", e);
             return ResponseJson.of(ErrorCode.USER_NOT_EXISTED, e.getMessage());
-        }
-    }
-
-    @PostMapping("/verify-otp")
-    public String register(@RequestBody OtpVerifyRequest request) {
-        try {
-            boolean isVerified = registrationService.verifyOtp(request);
-            if (isVerified) {
-                return ResponseJson.success("OTP verification successful", null);
-            } else {
-                return ResponseJson.of(ErrorCode.INVALID_OTP, "Invalid OTP");
-            }
-        } catch (Exception e) {
-            return ResponseJson.of(ErrorCode.INVALID_OTP, e.getMessage());
         }
     }
 
