@@ -91,13 +91,11 @@ public class JwtService {
 
             JwtBuilder builder = Jwts.builder().setId(id)
                     .setIssuedAt(new Date())
-                    .setSubject("Viettel Media")
+                    .setSubject(username)
                     .setIssuer("Viettel")
-                    .claim("username", username)
                     .claim("uuid", uuid)
                     .claim("access_token", access_token)
                     .claim("created", created)
-                    .setHeaderParam("typ", "JWS")
                     .signWith(signatureAlgorithm, signingKey);
 
             builder.setExpiration(expireDate);
@@ -130,13 +128,14 @@ public class JwtService {
                 Claims claims = Jwts.parser()
                         .setSigningKey(DatatypeConverter.parseBase64Binary(SIGNER_KEY))
                         .parseClaimsJws(cleanJwt).getBody();
-                String username = claims.get("username", String.class);
+                String subject = claims.getSubject();
                 String access_token = claims.get("access_token", String.class);
                 String id = claims.getId();
+
                 user.setAccess_token(access_token);
-                user.setUsername(username);
+                user.setUsername(subject);
                 user.setId(id);
-                logger.info("Successfully verified access token for user: {}", username);
+                logger.info("Successfully verified access token for user: {}", subject);
             }
         } catch (ExpiredJwtException ex) {
             logger.warn("JWT token has expired: {}", ex.getMessage());
@@ -161,16 +160,16 @@ public class JwtService {
                 Claims claims = Jwts.parser()
                         .setSigningKey(DatatypeConverter.parseBase64Binary(SIGNER_KEY))
                         .parseClaimsJws(jwt).getBody();
-                String username = claims.get("username", String.class);
+                String subject = claims.getSubject();
                 String access_token = claims.get("access_token", String.class);
                 long created = claims.get("created", Long.class);
                 long dateNow = System.currentTimeMillis();
 
                 String id = claims.getId();
                 user.setAccess_token(access_token);
-                user.setUsername(username);
+                user.setUsername(subject);
                 user.setId(id);
-                logger.info("Successfully verified refresh token for user: {}", username);
+                logger.info("Successfully verified refresh token for user: {}", subject);
 
             }
         } catch (ExpiredJwtException ex) {

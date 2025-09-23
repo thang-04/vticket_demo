@@ -181,9 +181,22 @@ export function UserProfile() {
     }
   }
 
-  const handleLogout = () => {
-    console.log("[v0] User logout initiated")
+  const handleLogout = async () => {
+  try {
+    console.log("[v1] User logout initiated");
+
+    // Xóa token ở client
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
+
+    // Chuyển hướng về trang chủ (hoặc trang login tuỳ bạn)
+    window.location.href = "/";
+  } catch (err) {
+    console.error("[v1] Logout error", err);
   }
+};
+
+
 
   const openEditDialog = () => {
     setEditForm({

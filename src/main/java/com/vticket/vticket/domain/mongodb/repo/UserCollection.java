@@ -42,7 +42,7 @@ public class UserCollection {
             query.addCriteria(criteria);
             users = mongoTemplate.findOne(query, User.class);
         } catch (Exception e) {
-
+            logger.error("Error finding user by username: {} - {}", userName, e.getMessage(), e);
         }
         return users;
     }
@@ -64,7 +64,6 @@ public class UserCollection {
                 logger.warn("User not found with ID: {}", userId);
             }
         } catch (Exception e) {
-
             logger.error("Error finding user by ID: {} - {}", userId, e.getMessage(), e);
         }
         return users;

@@ -2,7 +2,9 @@ package com.vticket.vticket.service;
 
 import com.google.gson.reflect.TypeToken;
 import com.vticket.vticket.config.RedisKey;
+import com.vticket.vticket.domain.mongodb.entity.Role;
 import com.vticket.vticket.domain.mongodb.entity.User;
+import com.vticket.vticket.domain.mongodb.repo.RoleCollection;
 import com.vticket.vticket.domain.mongodb.repo.UserCollection;
 import com.vticket.vticket.dto.request.UserCreationRequest;
 import com.vticket.vticket.dto.request.UserUpdateRequest;
@@ -10,6 +12,7 @@ import com.vticket.vticket.dto.response.UserResponse;
 import com.vticket.vticket.exception.AppException;
 import com.vticket.vticket.exception.ErrorCode;
 import com.vticket.vticket.mapper.UserMapper;
+import com.vticket.vticket.utils.PredefinedRole;
 import io.micrometer.common.util.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -19,6 +22,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -43,6 +47,8 @@ public class UserService {
     private RedisService redisService;
     @Autowired
     private RegistrationService registrationService;
+    @Autowired
+    private RoleCollection roleCollection;
 
 
     public UserResponse createNewUser(UserCreationRequest userCreationRequest) {
@@ -64,6 +70,15 @@ public class UserService {
 
                 String refreshToken = jwtService.generateToken(user, expireDateRefresh);//30 ngày
                 user.setRefresh_token(refreshToken);
+
+                HashSet<Role> roles = new HashSet<>();
+                if(roleCollection.getRoleByName(PredefinedRole.USER_ROLE)!=null){
+                    roles.add(roleCollection.getRoleByName(PredefinedRole.USER_ROLE));
+                } else {
+                    logger.error("Default role not found: {}", PredefinedRole.USER_ROLE);
+                }
+
+                user.setRoles(roles);
 
 //            processUserService.enQueueUser(user);
 

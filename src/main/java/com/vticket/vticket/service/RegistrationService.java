@@ -75,6 +75,36 @@ public class RegistrationService {
             return false;
         }
     }
+    public boolean resendRegistrationOtp(OtpVerifyRequest request) {
+        long start = System.currentTimeMillis();
+        String localPart = request.getEmail().split("@")[0];
+        String key = String.format(RedisKey.OTP_EMAIL, localPart);
+
+        try {
+            String cachedOtp = redisService.getRedisSsoUser().opsForValue().get(key);
+            String otp;
+
+            if (StringUtils.isEmpty(cachedOtp)) {
+                otp = generateOtp();
+                redisService.getRedisSsoUser().opsForValue().set(key, otp);
+                redisService.getRedisSsoUser().expire(key, 5L, TimeUnit.MINUTES);
+                logger.info("Generated NEW OTP for email {} after expiration", request.getEmail());
+            } else {
+                otp = cachedOtp;
+                logger.info("Reusing EXISTING OTP for email {} still valid", request.getEmail());
+            }
+
+            emailService.sendOtp(request.getEmail(), otp);
+            logger.info("Re-sent OTP to email {} with time {}ms",
+                    request.getEmail(), (System.currentTimeMillis() - start));
+            return true;
+
+        } catch (Exception e) {
+            logger.error("Failed to re-send OTP to email {}: {}", request.getEmail(), e.getMessage());
+            return false;
+        }
+    }
+
 }
 
 

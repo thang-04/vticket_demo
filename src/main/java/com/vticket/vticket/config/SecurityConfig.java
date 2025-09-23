@@ -24,7 +24,7 @@ import org.springframework.web.filter.CorsFilter;
 public class SecurityConfig {
 
     private final String[] PUBLIC_ENDPOINTS ={
-       "/login","/introspect","/refresh","/api/users","api/users/verify-otp","/event/categories","/event/list","/event/{eventId}","/event/search"
+       "/login","/introspect","/refresh","/api/users","/verify-otp","/resend-otp","/event/categories","/event/list","/event/{eventId}","/event/search"
     };
 
     @Bean

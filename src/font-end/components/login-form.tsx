@@ -6,6 +6,16 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 
+interface LoginResponse {
+  code: number
+  codeName: string
+  desc: string
+  result?: {
+    token: string
+  }
+}
+
+
 export function LoginForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -17,34 +27,49 @@ export function LoginForm() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      setError("Vui lòng nhập đầy đủ email và mật khẩu")
+      setError("Vui lòng nhập đầy đủ username và mật khẩu")
       return
     }
 
     setIsLoading(true)
     setError("")
-
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      const response = await fetch("http://localhost:8080/vticket/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username: email.trim(), // backend yêu cầu username
+          password: password
+        }),
+      })
 
-      // Simulate login validation
-      const success = Math.random() > 0.3
+      const data: LoginResponse = await response.json()
 
-      if (success) {
+      if (response.ok && data.code === 1000) {
+        const token = data.result?.token
+        if (token) {
+          localStorage.setItem("authToken", token)
+        }
+
         toast({
           title: "Đăng nhập thành công",
           description: "Chào mừng bạn đến với Vticket!",
         })
         router.push("/dashboard")
       } else {
-        setError("Email hoặc mật khẩu không chính xác")
+        setError(data.desc || "Tài khoản hoặc mật khẩu không chính xác")
       }
     } catch (error) {
+      console.error("Login error:", error)
       setError("Có lỗi xảy ra khi đăng nhập. Vui lòng thử lại.")
     } finally {
       setIsLoading(false)
     }
   }
+
+
 
   const handleSocialLogin = async (provider: "google" | "facebook" | "apple") => {
     setSocialLoading(provider)
@@ -115,13 +140,14 @@ export function LoginForm() {
           <div className="space-y-4">
             <div className="space-y-3">
               <Input
-                type="email"
-                placeholder="Email"
+                type="text"
+                placeholder="Tên đăng nhập"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="bg-input border-border text-foreground placeholder:text-muted-foreground"
                 disabled={isLoading || socialLoading !== null}
               />
+
               <Input
                 type="password"
                 placeholder="Mật khẩu"

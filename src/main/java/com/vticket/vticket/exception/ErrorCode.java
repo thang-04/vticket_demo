@@ -25,7 +25,8 @@ public enum ErrorCode {
     OTP_SEND_FAIL(1016, "Cannot send OTP", HttpStatus.INTERNAL_SERVER_ERROR),
     INVALID_OTP(1017, "OTP is invalid", HttpStatus.BAD_REQUEST),
     OTP_EXPIRED(1018, "OTP is expired", HttpStatus.BAD_REQUEST),
-    RATE_LIMIT_EXCEEDED(1019, "Rate limit exceeded", HttpStatus.TOO_MANY_REQUESTS)
+    RATE_LIMIT_EXCEEDED(1019, "Rate limit exceeded", HttpStatus.TOO_MANY_REQUESTS),
+    INVALID_REQUEST(1020, "Invalid request", HttpStatus.BAD_REQUEST),
 
     ;
 

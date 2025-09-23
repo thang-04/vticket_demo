@@ -23,7 +23,8 @@ export function OtpVerification() {
   const lastName = searchParams.get("lastName") || ""
   const username = searchParams.get("username") || ""
 
-  const otpRefs = useRef<(HTMLInputElement | null)[]>([])
+
+  const otpRefs = useRef<Array<HTMLInputElement | null>>([])
 
   useEffect(() => {
     if (!email) {
@@ -86,24 +87,35 @@ export function OtpVerification() {
     setError("")
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      const response = await fetch("http://localhost:8080/vticket/verify-otp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          email,
+          otp: otpString,
+        }),
+      })
 
-      // Simulate success/failure
-      if (otpString === "123456") {
+      const data = await response.json()
+
+      if (response.ok && data.code === 1000) {
         if (type === "register") {
           toast({
             title: "Đăng ký thành công",
             description: `Chào mừng ${firstName} ${lastName} đến với Vticket!`,
           })
+          router.push("/login")
         } else {
           toast({
             title: "Đăng nhập thành công",
             description: "Chào mừng bạn đến với Vticket!",
           })
+          router.push("/dashboard")
         }
-        router.push("/dashboard")
       } else {
-        setError("Mã OTP không chính xác. Vui lòng thử lại.")
+        setError(data.desc || "Mã OTP không chính xác. Vui lòng thử lại.")
       }
     } catch (error) {
       setError("Có lỗi xảy ra. Vui lòng thử lại.")
@@ -119,13 +131,26 @@ export function OtpVerification() {
     setError("")
 
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1000))
-      setCountdown(60)
-      setOtp(["", "", "", "", "", ""])
-      toast({
-        title: "OTP mới đã được gửi",
-        description: `Mã xác thực mới đã được gửi đến email ${email}`,
+      const response = await fetch("http://localhost:8080/vticket/resend-otp", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ email }),
       })
+
+      const data = await response.json()
+
+      if (response.ok && data.code === 1000) {
+        setCountdown(60)
+        setOtp(["", "", "", "", "", ""])
+        toast({
+          title: "OTP mới đã được gửi",
+          description: `Mã xác thực mới đã được gửi đến email ${email}`,
+        })
+      } else {
+        setError(data.desc || "Không thể gửi lại OTP. Vui lòng thử lại.")
+      }
     } catch (error) {
       setError("Không thể gửi lại OTP. Vui lòng thử lại.")
     } finally {
@@ -176,7 +201,9 @@ export function OtpVerification() {
                 {otp.map((digit, index) => (
                   <Input
                     key={index}
-                    // ref={(el) => (otpRefs.current[index] = el)}
+                    ref={(el: HTMLInputElement | null) => {
+                      otpRefs.current[index] = el
+                    }}
                     type="text"
                     inputMode="numeric"
                     pattern="[0-9]*"

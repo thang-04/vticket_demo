@@ -50,7 +50,14 @@ public class AuthenController {
         }
     }
 
-    @PostMapping("log")
+//    @PostMapping("/logout")
+//    public String logout(@RequestBody AuthenticationRequest request) {
+//        try {
+//
+//        } catch (Exception e) {
+//            return ResponseJson.of(ErrorCode.UNAUTHENTICATED, e.getMessage());
+//        }
+//    }
 
     @PostMapping("/verify-otp")
     public String register(@RequestBody OtpVerifyRequest request) {
@@ -63,6 +70,20 @@ public class AuthenController {
             }
         } catch (Exception e) {
             return ResponseJson.of(ErrorCode.INVALID_OTP, e.getMessage());
+        }
+    }
+
+    @PostMapping("/resend-otp")
+    public String resendOtp(@RequestBody OtpVerifyRequest request) {
+        try {
+            boolean isResent = registrationService.resendRegistrationOtp(request);
+            if (isResent) {
+                return ResponseJson.success("OTP resent successfully", null);
+            } else {
+                return ResponseJson.of(ErrorCode.INVALID_REQUEST, "Failed to resend OTP");
+            }
+        } catch (Exception e) {
+            return ResponseJson.of(ErrorCode.INVALID_REQUEST, e.getMessage());
         }
     }
 

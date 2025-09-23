@@ -24,6 +24,18 @@ interface FormErrors {
   rePassword?: string
 }
 
+export interface RegisterResponse {
+  code: number
+  result?: {
+    id: string
+    email: string
+    firstName: string
+    lastName: string
+  }
+  desc: string
+}
+
+
 export function RegisterForm() {
   const [formData, setFormData] = useState<FormData>({
     firstName: "",
@@ -99,39 +111,78 @@ export function RegisterForm() {
     }
   }
 
-  const handleRegister = async () => {
-    if (!validateForm()) return
+const handleRegister = async () => {
+  if (!validateForm()) return
+  setIsLoading(true)
 
-    setIsLoading(true)
+  try {
+    const response = await fetch("http://localhost:8080/vticket/api/users", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        username: formData.username.trim(),
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password,
+      }),
+    })
 
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+    const data: RegisterResponse = await response.json()
 
+    if (response.ok && data.code === 1000) {
       toast({
-        title: "OTP đã được gửi",
+        title: "Đăng ký thành công",
         description: `Mã xác thực đã được gửi đến email ${formData.email}`,
       })
 
-      // Redirect to OTP verification page with email and registration data
       const params = new URLSearchParams({
         email: formData.email,
         type: "register",
         firstName: formData.firstName,
         lastName: formData.lastName,
         username: formData.username,
+        userId: data.result?.id || "",
       })
-      router.push(`/verify-otp?${params.toString()}`)
-    } catch (error) {
-      toast({
-        title: "Lỗi đăng ký",
-        description: "Không thể tạo tài khoản. Vui lòng thử lại.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
+     router.push(`/verify-otp?email=${encodeURIComponent(formData.email)}`)
+    } else {
+      // Xử lý lỗi trùng email hoặc username
+      if (data.code === 1002) {
+        if (data.desc?.toLowerCase().includes("email")) {
+          setErrors({ email: "Email này đã được sử dụng" })
+        } else if (data.desc?.toLowerCase().includes("username")) {
+          setErrors({ username: "Tên đăng nhập này đã được sử dụng" })
+        } else {
+          toast({
+            title: "Lỗi đăng ký",
+            description: "Email hoặc tên đăng nhập đã được sử dụng",
+            variant: "destructive",
+          })
+        }
+      } else {
+        toast({
+          title: "Lỗi đăng ký",
+          description: data.desc || "Không thể tạo tài khoản. Vui lòng thử lại.",
+          variant: "destructive",
+        })
+      }
     }
+  } catch (error) {
+    console.error("Registration error:", error)
+    toast({
+      title: "Lỗi kết nối",
+      description: "Không thể kết nối đến máy chủ. Vui lòng thử lại.",
+      variant: "destructive",
+    })
+  } finally {
+    setIsLoading(false)
   }
+}
+
+
+
 
   return (
     <div className="min-h-screen flex">
