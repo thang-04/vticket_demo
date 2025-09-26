@@ -69,14 +69,14 @@ public class EventService {
                     redisService.getRedisSsoUser().expire(key, 1, TimeUnit.HOURS);
                     logger.info("Stored events in Redis cache.");
                 }
+                logger.info("getAllEvents in MySQL|Time taken: {} ms", (System.currentTimeMillis() - start));
+                return listEvents;
             } else {
                 listEvents = (List<Event>) gson.fromJson(resultRedis, new TypeToken<List<Event>>() {
                 }.getType());
-                logger.info("Fetched events from Redis cache: {} events found.", listEvents.size());
+                logger.info("getAllEvents in Redis|Time taken: {} ms", (System.currentTimeMillis() - start));
+                return listEvents;
             }
-
-            logger.info("getAllEvents|Time taken: {} ms", (System.currentTimeMillis() - start));
-            return listEvents;
         } catch (Exception ex) {
             logger.error("getAllEvents|Exception|{}" + ex.getMessage(), ex);
         }

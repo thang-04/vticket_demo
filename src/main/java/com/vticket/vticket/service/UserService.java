@@ -6,11 +6,10 @@ import com.vticket.vticket.domain.mongodb.entity.Role;
 import com.vticket.vticket.domain.mongodb.entity.User;
 import com.vticket.vticket.domain.mongodb.repo.RoleCollection;
 import com.vticket.vticket.domain.mongodb.repo.UserCollection;
+import com.vticket.vticket.dto.request.ChangePasswordRequest;
 import com.vticket.vticket.dto.request.UserCreationRequest;
 import com.vticket.vticket.dto.request.UserUpdateRequest;
 import com.vticket.vticket.dto.response.UserResponse;
-import com.vticket.vticket.exception.AppException;
-import com.vticket.vticket.exception.ErrorCode;
 import com.vticket.vticket.mapper.UserMapper;
 import com.vticket.vticket.utils.PredefinedRole;
 import io.micrometer.common.util.StringUtils;
@@ -20,7 +19,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -49,6 +50,8 @@ public class UserService {
     private RegistrationService registrationService;
     @Autowired
     private RoleCollection roleCollection;
+    @Autowired
+    private FileUploadService fileUploadService;
 
 
     public UserResponse createNewUser(UserCreationRequest userCreationRequest) {
@@ -72,7 +75,7 @@ public class UserService {
                 user.setRefresh_token(refreshToken);
 
                 HashSet<Role> roles = new HashSet<>();
-                if(roleCollection.getRoleByName(PredefinedRole.USER_ROLE)!=null){
+                if (roleCollection.getRoleByName(PredefinedRole.USER_ROLE) != null) {
                     roles.add(roleCollection.getRoleByName(PredefinedRole.USER_ROLE));
                 } else {
                     logger.error("Default role not found: {}", PredefinedRole.USER_ROLE);
@@ -147,12 +150,12 @@ public class UserService {
             if (!StringUtils.isBlank(resultRedis)) {
                 user = gson.fromJson(resultRedis, new TypeToken<User>() {
                 }.getType());
-                logger.info("User found in Redis cache  : {} with time: {}", user, (System.currentTimeMillis() - start));
+                logger.info("User found in Redis cache  : {} with time: {}ms", user, (System.currentTimeMillis() - start));
             } else {
                 // get in mongo
                 user = userCollection.getUserById(id);
                 dataFrom = "BY MONGO";
-                logger.info("User retrieved from MONGO  : {} with time: {}", user, (System.currentTimeMillis() - start));
+                logger.info("User retrieved from MONGO  : {} with time: {}ms", user, (System.currentTimeMillis() - start));
                 if (user == null) {
                     logger.info("User not found with ID: {}", id);
                 } else {
@@ -295,8 +298,9 @@ public class UserService {
 
     public UserResponse getMyInfo() {
         var context = SecurityContextHolder.getContext();
+        // username from context is sub in jwt token
         String username = context.getAuthentication().getName();
-
+        logger.info("Get info authentication for username: {}", username);
         User user = userCollection.getUserInfoByUserName(username);
         if (user == null) {
             logger.info("User not found in context: {}", username);
@@ -306,8 +310,12 @@ public class UserService {
         return userMapper.toResponse(user);
     }
 
-    public boolean updateUserProfile(String userId, UserUpdateRequest req) {
-        return userCollection.updateUserInfo(userId, req);
+    public boolean updateUserProfile(String userId, UserUpdateRequest req, MultipartFile avatar) throws IOException {
+        long start = System.currentTimeMillis();
+        logger.info("Updating user profile for user ID: {} with data: {}", userId, gson.toJson(req));
+        String filePathImg = fileUploadService.uploadFileImg(avatar);
+        logger.info("File upload completed with path:{} in {} ms", filePathImg, (System.currentTimeMillis() - start));
+        return userCollection.updateUserInfo(userId, req, filePathImg);
     }
 
     public boolean deleteUserAccount(User user) {
@@ -342,4 +350,24 @@ public class UserService {
         logger.info("|deleteUserAccount|" + (System.currentTimeMillis() - start) + "ms");
         return result;
     }
+
+    public boolean changePassword(ChangePasswordRequest request, String accessToken) {
+        long start = System.currentTimeMillis();
+        User user = getUserFromAccessToken(accessToken);
+        if (user == null) {
+            logger.info("User not found in accessToken: {}", accessToken);
+            return false;
+        }
+        boolean isMatches = passwordEncoder.matches(request.getOldPassword(), user.getPassword());
+        if (isMatches) {
+            logger.info("Change password for user: {} success with time {}ms", user.getUsername(), (System.currentTimeMillis() - start));
+            String encodedNewPassword = passwordEncoder.encode(request.getNewPassword());
+            userCollection.updatePassword(user.getId(), encodedNewPassword);
+            return true;
+        } else {
+            logger.info("Old password does not match for user: {}", user.getUsername());
+            return false;
+        }
+    }
+
 }

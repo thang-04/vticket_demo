@@ -93,15 +93,12 @@ public class UserCollection {
         return response;
     }
 
-    public boolean updateUserInfo(String userId, UserUpdateRequest req) {
+    public boolean updateUserInfo(String userId, UserUpdateRequest req, String filePathImg) {
         String logPrefix = "[updateProfile]|profile=" + gson.toJson(req);
         try {
             Query query = new Query();
             query.addCriteria(Criteria.where("_id").is(userId));
             Update update = new Update();
-            if (StringUtils.isNotEmpty(req.getUsername())) {
-                update.set("username", req.getUsername());
-            }
             String fullName = "";
             if (StringUtils.isNotEmpty(req.getFirstName())) {
                 fullName += req.getFirstName();
@@ -118,8 +115,8 @@ public class UserCollection {
             if (StringUtils.isNotEmpty(req.getAddress())) {
                 update.set("address", req.getAddress());
             }
-            if (StringUtils.isNotEmpty(req.getAvatar())) {
-                update.set("avatar", req.getAvatar());
+            if (StringUtils.isNotEmpty(filePathImg)) {
+                update.set("avatar", filePathImg);
             }
             update.set("updated_at", new Date());
             mongoTemplate.updateFirst(query, update, "users");
@@ -153,6 +150,24 @@ public class UserCollection {
             }
         } catch (Exception e) {
             logger.error("deleteAccount|userId={}|Exception={}", userId, e.getMessage(), e);
+        }
+        return response;
+    }
+
+    public boolean updatePassword(String userId, String newPassword) {
+        logger.info("updatePassword|userId={}", userId);
+        boolean response = false;
+        try {
+            if (StringUtils.isNotEmpty(userId) && StringUtils.isNotEmpty(newPassword)) {
+                Query query = new Query(Criteria.where("_id").is(userId));
+                Update update = new Update();
+                update.set("password", newPassword);
+                update.set("updated_at", new Date());
+                mongoTemplate.updateFirst(query, update, User.class);
+                response = true;
+            }
+        } catch (Exception e) {
+            logger.error("updatePassword|userId={}|Exception={}", userId, e.getMessage(), e);
         }
         return response;
     }

@@ -2,12 +2,10 @@ package com.vticket.vticket.service;
 
 import com.vticket.vticket.config.RedisKey;
 import com.vticket.vticket.domain.mongodb.entity.User;
-import com.vticket.vticket.utils.CommonUtils;
 import lombok.Getter;
 import lombok.Setter;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 

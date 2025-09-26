@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -29,28 +29,63 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { Phone, Mail, Calendar, MapPin, Ticket, Settings, LogOut, Edit3, Trash2, Save, X } from "lucide-react"
 
+// Định nghĩa kiểu dữ liệu cho user trả về từ API
+interface ApiUserData {
+  id: string;
+  fullName: string;
+  username: string;
+  email: string;
+  address: string;
+  createdAt: string;
+  updatedAt: string;
+  isActive: boolean;
+}
+
+// Định nghĩa kiểu dữ liệu cho response khi update thành công
+interface ApiUpdateResponseData {
+  id: string;
+  full_name: string;
+  username: string;
+  email: string;
+  address: string;
+  avatar: string;
+  created_at: string;
+  updated_at: string;
+  isActive: boolean;
+  access_token: string;
+  refresh_token: string;
+  roles: { name: string; description: string }[];
+}
+
+// Định nghĩa kiểu dữ liệu cho state của component
+interface UserProfileState {
+  name: string;
+  phone: string; // API không có, giữ lại làm mock
+  email: string;
+  joinDate: string;
+  location: string;
+  avatar: string; 
+  totalTickets: number; // API không có, giữ lại làm mock
+  upcomingEvents: number; // API không có, giữ lại làm mock
+}
+
+
 export function UserProfile() {
-  const [user, setUser] = useState({
-    name: "Nguyễn Văn An",
-    phone: "+84 987 654 321",
-    email: "nguyenvanan@email.com",
-    joinDate: "Tháng 3, 2024",
-    location: "Hồ Chí Minh, Việt Nam",
-    avatar: "/diverse-user-avatars.png",
-    totalTickets: 12,
-    upcomingEvents: 3,
-  })
+  const [user, setUser] = useState<UserProfileState | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
 
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [passwordDialogOpen, setPasswordDialogOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [editForm, setEditForm] = useState({
-    name: user.name,
-    phone: user.phone,
-    email: user.email,
-    location: user.location,
+    name: "",
+    phone: "",
+    email: "",
+    location: "",
   })
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
@@ -58,6 +93,62 @@ export function UserProfile() {
   })
 
   const { toast } = useToast()
+  
+  // Hàm format ngày tháng
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return `Tháng ${date.getMonth() + 1}, ${date.getFullYear()}`;
+  };
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      const token = localStorage.getItem("access_token");
+      if (!token) {
+        setError("Vui lòng đăng nhập để xem thông tin.");
+        setLoading(false);
+        // window.location.href = "/login";
+        return;
+      }
+
+      try {
+        const response = await fetch("http://localhost:8080/vticket/api/users", {
+          headers: {
+            "Authorization": `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+           throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        if (data && data.code === 1000 && data.result) {
+            const apiUser: ApiUserData & { avatar?: string } = data.result;
+            setUser({
+                name: apiUser.fullName,
+                email: apiUser.email,
+                location: apiUser.address,
+                joinDate: formatDate(apiUser.createdAt),
+                avatar: apiUser.avatar ? `http://localhost:8080${apiUser.avatar}` : "/diverse-user-avatars.png",
+                phone: "+84 987 654 321", 
+                totalTickets: 12,
+                upcomingEvents: 3,
+            });
+        } else {
+            throw new Error(data.desc || "Failed to parse user data.");
+        }
+
+      } catch (e: any) {
+        console.error("Failed to fetch user data:", e);
+        setError(e.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchUserData();
+  }, []);
+
 
   const recentTickets = [
     {
@@ -87,27 +178,68 @@ export function UserProfile() {
   ]
 
   const handleUpdateProfile = async () => {
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+        toast({ title: "Lỗi xác thực", description: "Không tìm thấy token. Vui lòng đăng nhập lại.", variant: "destructive" });
+        return;
+    }
+    
     setIsLoading(true)
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500))
+      const formData = new FormData();
+      
+      const nameParts = editForm.name.trim().split(/\s+/);
+      const firstName = nameParts.shift() || "";
+      const lastName = nameParts.join(" ");
 
-      setUser((prev) => ({
-        ...prev,
-        name: editForm.name,
-        phone: editForm.phone,
-        email: editForm.email,
-        location: editForm.location,
-      }))
+      formData.append("firstName", firstName);
+      formData.append("lastName", lastName);
+      formData.append("address", editForm.location);
 
-      setEditDialogOpen(false)
-      toast({
-        title: "Cập nhật thành công",
-        description: "Thông tin cá nhân đã được cập nhật.",
-      })
-    } catch (error) {
+      if (avatarFile) {
+        formData.append("avatar", avatarFile);
+      }
+
+      const response = await fetch("http://localhost:8080/vticket/api/users/update", {
+        method: 'POST',
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const data = await response.json();
+      
+      if (response.ok && data.code === 1000 && data.result) {
+        const updatedApiUser: ApiUpdateResponseData = data.result;
+
+        localStorage.setItem("access_token", updatedApiUser.access_token);
+        localStorage.setItem("refresh_token", updatedApiUser.refresh_token);
+
+        setUser({
+            name: updatedApiUser.full_name,
+            email: updatedApiUser.email,
+            location: updatedApiUser.address,
+            joinDate: formatDate(updatedApiUser.created_at),
+            avatar: `http://localhost:8080${updatedApiUser.avatar}`,
+            phone: user?.phone || "+84 987 654 321",
+            totalTickets: user?.totalTickets || 12,
+            upcomingEvents: user?.upcomingEvents || 3,
+        });
+
+        setEditDialogOpen(false)
+        setAvatarFile(null); // Reset file input
+        toast({
+          title: "Cập nhật thành công",
+          description: "Thông tin cá nhân đã được cập nhật.",
+        })
+      } else {
+        throw new Error(data.desc || "Cập nhật không thành công.");
+      }
+    } catch (error: any) {
       toast({
         title: "Lỗi cập nhật",
-        description: "Không thể cập nhật thông tin. Vui lòng thử lại.",
+        description: error.message || "Không thể cập nhật thông tin. Vui lòng thử lại.",
         variant: "destructive",
       })
     } finally {
@@ -136,6 +268,7 @@ export function UserProfile() {
 
     setIsLoading(true)
     try {
+      // TODO: Thêm logic gọi API để đổi mật khẩu
       await new Promise((resolve) => setTimeout(resolve, 1500))
 
       setPasswordDialogOpen(false)
@@ -158,6 +291,7 @@ export function UserProfile() {
   const handleDeleteAccount = async () => {
     setIsLoading(true)
     try {
+      // TODO: Thêm logic gọi API để xoá tài khoản
       await new Promise((resolve) => setTimeout(resolve, 2000))
 
       toast({
@@ -165,7 +299,7 @@ export function UserProfile() {
         description: "Tài khoản của bạn đã được xóa thành công. Bạn sẽ được chuyển hướng về trang chủ.",
       })
 
-      // Simulate redirect to home page
+      localStorage.clear(); // Xóa hết token
       setTimeout(() => {
         window.location.href = "/"
       }, 2000)
@@ -182,31 +316,52 @@ export function UserProfile() {
   }
 
   const handleLogout = async () => {
-  try {
-    console.log("[v1] User logout initiated");
-
-    // Xóa token ở client
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
-
-    // Chuyển hướng về trang chủ (hoặc trang login tuỳ bạn)
-    window.location.href = "/";
-  } catch (err) {
-    console.error("[v1] Logout error", err);
-  }
-};
-
-
+    try {
+      console.log("[v1] User logout initiated");
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
+      window.location.href = "/";
+    } catch (err) {
+      console.error("[v1] Logout error", err);
+    }
+  };
 
   const openEditDialog = () => {
+    if (!user) return;
     setEditForm({
       name: user.name,
       phone: user.phone,
       email: user.email,
       location: user.location,
     })
+    setAvatarFile(null); // Reset file khi mở dialog
     setEditDialogOpen(true)
   }
+
+  if (loading) {
+    return (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+            <p className="text-foreground">Đang tải thông tin người dùng...</p>
+        </div>
+    );
+  }
+
+  if (error) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+            <p className="text-red-500">Lỗi: {error}</p>
+        </div>
+    );
+  }
+  
+  if (!user) {
+     return (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+            <p className="text-foreground">Không tìm thấy thông tin người dùng.</p>
+        </div>
+    );
+  }
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -412,32 +567,27 @@ export function UserProfile() {
                 className="bg-input border-border text-foreground"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Số điện thoại</Label>
-              <Input
-                id="phone"
-                value={editForm.phone}
-                onChange={(e) => setEditForm((prev) => ({ ...prev, phone: e.target.value }))}
-                className="bg-input border-border text-foreground"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={editForm.email}
-                onChange={(e) => setEditForm((prev) => ({ ...prev, email: e.target.value }))}
-                className="bg-input border-border text-foreground"
-              />
-            </div>
-            <div className="space-y-2">
+             <div className="space-y-2">
               <Label htmlFor="location">Địa chỉ</Label>
               <Input
                 id="location"
                 value={editForm.location}
                 onChange={(e) => setEditForm((prev) => ({ ...prev, location: e.target.value }))}
                 className="bg-input border-border text-foreground"
+              />
+            </div>
+             <div className="space-y-2">
+              <Label htmlFor="avatar">Ảnh đại diện</Label>
+              <Input
+                id="avatar"
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  if (e.target.files && e.target.files[0]) {
+                    setAvatarFile(e.target.files[0]);
+                  }
+                }}
+                className="bg-input border-border text-foreground file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-primary file:text-primary-foreground hover:file:bg-primary/90"
               />
             </div>
           </div>
@@ -559,3 +709,4 @@ export function UserProfile() {
     </div>
   )
 }
+

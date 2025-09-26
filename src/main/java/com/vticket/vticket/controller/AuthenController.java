@@ -2,10 +2,7 @@ package com.vticket.vticket.controller;
 
 import com.vticket.vticket.config.Config;
 import com.vticket.vticket.domain.mongodb.entity.User;
-import com.vticket.vticket.dto.request.AuthenticationRequest;
-import com.vticket.vticket.dto.request.IntrospectRequest;
-import com.vticket.vticket.dto.request.OtpVerifyRequest;
-import com.vticket.vticket.dto.request.RefreshRequest;
+import com.vticket.vticket.dto.request.*;
 import com.vticket.vticket.dto.response.AuthenticationResponse;
 import com.vticket.vticket.dto.response.IntrospectResponse;
 import com.vticket.vticket.exception.ErrorCode;
@@ -19,6 +16,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.text.ParseException;
@@ -123,6 +121,25 @@ public class AuthenController {
         } catch (Exception e) {
             logger.error("Token refresh failed for token: {} - {}", refreshRequest.getToken(), e.getMessage(), e);
             return ResponseJson.of(ErrorCode.UNAUTHENTICATED, e.getMessage());
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public String resetPassword(@RequestBody ChangePasswordRequest request,
+                                @RequestHeader(value = "Authorization", required = false) String accessToken) {
+        logger.info("Received request to delete account with token: " + accessToken);
+        if (accessToken != null) {
+            accessToken = accessToken.replaceFirst("^Bearer\\s+", "");
+        }
+        try {
+            boolean isReset = userService.changePassword(request, accessToken);
+            if (isReset) {
+                return ResponseJson.success("Password reset successful", null);
+            } else {
+                return ResponseJson.of(ErrorCode.INVALID_REQUEST, "Failed to reset password");
+            }
+        } catch (Exception e) {
+            return ResponseJson.of(ErrorCode.INVALID_REQUEST, e.getMessage());
         }
     }
 

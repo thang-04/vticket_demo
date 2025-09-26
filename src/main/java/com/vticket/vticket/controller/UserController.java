@@ -15,8 +15,10 @@ import com.vticket.vticket.utils.ResponseJson;
 import jakarta.validation.Valid;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.MediaType;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import static com.vticket.vticket.utils.CommonUtils.gson;
 
@@ -88,9 +90,10 @@ public class UserController {
         }
     }
 
-    @PostMapping("/update")
-    public String updateUser(@RequestBody @Valid UserUpdateRequest user,
+    @PostMapping(path = "/update", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public String updateUser(@Valid @ModelAttribute UserUpdateRequest user,
                              BindingResult bindingResult,
+                             @RequestPart(value = "avatar", required = false) MultipartFile avatar,
                              @RequestHeader(value = "Authorization", required = false) String accessToken) {
         logger.info("Received request to update user: " + gson.toJson(user) + " with token: " + accessToken);
         if (accessToken != null) {
@@ -113,6 +116,7 @@ public class UserController {
                         ". Time taken: " + (System.currentTimeMillis() - startTime) + "ms");
 
                 return ResponseJson.of(ErrorCode.USER_NOT_EXISTED, "User not found");
+                //Check token expired
             } else if (currentUser.getId().equals(String.valueOf(Config.CODE.ERROR_CODE_103))) {
                 logger.info("User update failed: Token expired for token " + accessToken +
                         ". Time taken: " + (System.currentTimeMillis() - startTime) + "ms");
@@ -120,7 +124,7 @@ public class UserController {
                 return ResponseJson.of(ErrorCode.EXPIRED_TOKEN, "Token expired");
             }
 
-            if (userService.updateUserProfile(currentUser.getId(), user)) {
+            if (userService.updateUserProfile(currentUser.getId(), user, avatar)) {
                 redisService.deleteRedisUser(currentUser);
                 currentUser = userService.getUserById(currentUser.getId());
                 logger.info("User updated successfully: " + currentUser +

@@ -50,7 +50,7 @@ export function LoginForm() {
       if (response.ok && data.code === 1000) {
         const token = data.result?.token
         if (token) {
-          localStorage.setItem("authToken", token)
+          localStorage.setItem("access_token", token)
         }
 
         toast({

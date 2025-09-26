@@ -1,57 +1,119 @@
-"use client"
-import { useState } from "react"
-import { ChevronDown, Filter } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
+"use client";
+import { useState, useEffect } from "react";
+import { ChevronDown, Filter } from "lucide-react";
 
-const categories = [
-  { id: "chuyen-muc", label: "Chuyên mục", items: ["Âm nhạc", "Giải trí", "Thể thao", "Giáo dục"] },
-  { id: "am-nhac", label: "Âm nhạc", items: ["Pop", "Rock", "Classical", "Jazz"] },
-  { id: "giai-tri", label: "Giải trí", items: ["Concert", "Show", "Festival", "Theater"] },
-  { id: "the-thao", label: "Thể thao", items: ["Bóng đá", "Tennis", "Basketball", "Volleyball"] },
-  { id: "giao-duc", label: "Giáo dục", items: ["Workshop", "Seminar", "Conference", "Training"] },
-  { id: "vi-tri", label: "Vị trí", items: ["Toàn quốc", "Hà Nội", "Hà Giang", "Cao Bằng", "Bắc Kạn", "Tuyên Quang"] },
-  {
-    id: "muc-gia",
-    label: "Mức giá",
-    items: [
-      "Tất cả",
-      "Miễn phí",
-      "Dưới 500 nghìn đồng",
-      "Từ 1 - 3 triệu đồng",
-      "Từ 3 - 7 triệu đồng",
-      "Trên 7 triệu đồng",
-    ],
-  },
-]
+// --- Mock Components for standalone example ---
+const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string }> = ({ children, className, ...props }) => (
+  <button
+    {...props}
+    className={`inline-flex items-center justify-center rounded-md text-sm font-medium ${className}`}
+  >
+    {children}
+  </button>
+);
+
+const Checkbox: React.FC<any> = ({ id, checked, onCheckedChange }) => (
+    <input type="checkbox" id={id} checked={checked} onChange={onCheckedChange} className="mr-2" />
+);
+// --- End Mock Components ---
+
+
+// Định nghĩa kiểu dữ liệu cho Category từ API
+interface ApiCategory {
+  category_id: number;
+  name: string;
+  description: string;
+}
+
+// Định nghĩa cấu trúc cho một mục lọc trong UI
+interface FilterSection {
+    id: string;
+    label: string;
+    items: string[];
+}
+
 
 export function CategoryFilter() {
-  const [expandedCategories, setExpandedCategories] = useState<string[]>(["chuyen-muc"])
-  const [selectedFilters, setSelectedFilters] = useState<string[]>([])
+  const [apiCategories, setApiCategories] = useState<ApiCategory[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const [expandedCategories, setExpandedCategories] = useState<string[]>(["chuyen-muc"]);
+  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
+  
+  // Gọi API để lấy danh sách categories
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch("http://localhost:8080/vticket/event/categories");
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        const data = await response.json();
+        if (data && data.code === 1000 && Array.isArray(data.result)) {
+          setApiCategories(data.result);
+        } else {
+          throw new Error("Invalid data structure from API");
+        }
+      } catch (e: any) {
+        setError(e.message);
+        console.error("Failed to fetch categories:", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  // Tạo danh sách bộ lọc cuối cùng bằng cách kết hợp dữ liệu từ API và dữ liệu cứng
+  const filterSections: FilterSection[] = [
+    {
+        id: "chuyen-muc",
+        label: "Chuyên mục",
+        items: loading ? [] : apiCategories.map(cat => cat.name), // Lấy tên từ API
+    },
+    // Các mục lọc khác giữ nguyên
+    { id: "vi-tri", label: "Vị trí", items: ["Toàn quốc", "Hà Nội", "Hà Giang", "Cao Bằng", "Bắc Kạn", "Tuyên Quang"] },
+    {
+      id: "muc-gia",
+      label: "Mức giá",
+      items: [
+        "Tất cả",
+        "Miễn phí",
+        "Dưới 500 nghìn đồng",
+        "Từ 1 - 3 triệu đồng",
+        "Từ 3 - 7 triệu đồng",
+        "Trên 7 triệu đồng",
+      ],
+    },
+  ];
+
 
   const toggleCategory = (categoryId: string) => {
     setExpandedCategories((prev) =>
       prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId],
-    )
-  }
+    );
+  };
 
   const toggleFilter = (filter: string) => {
-    setSelectedFilters((prev) => (prev.includes(filter) ? prev.filter((f) => f !== filter) : [...prev, filter]))
-  }
+    setSelectedFilters((prev) => (prev.includes(filter) ? prev.filter((f) => f !== filter) : [...prev, filter]));
+  };
 
   return (
-    <div className="w-80 bg-card rounded-lg p-6 h-fit">
+    <aside className="w-80 bg-card rounded-lg p-6 h-fit border shrink-0">
       <div className="flex items-center gap-2 mb-6">
         <Filter className="w-5 h-5 text-foreground" />
         <h2 className="text-lg font-semibold text-card-foreground">Bộ lọc tìm kiếm</h2>
       </div>
 
       <div className="space-y-4">
-        {categories.map((category) => (
+        {error && <p className="text-red-500 text-sm">Lỗi tải bộ lọc: {error}</p>}
+        {filterSections.map((category) => (
           <div key={category.id} className="border-b border-border pb-4 last:border-b-0">
             <Button
               variant="ghost"
-              className="w-full justify-between p-0 h-auto text-card-foreground hover:text-primary"
+              className="w-full justify-between p-0 h-auto text-card-foreground hover:bg-transparent"
               onClick={() => toggleCategory(category.id)}
             >
               <span className="font-medium">{category.label}</span>
@@ -64,6 +126,7 @@ export function CategoryFilter() {
 
             {expandedCategories.includes(category.id) && (
               <div className="mt-3 space-y-2">
+                 {category.id === 'chuyen-muc' && loading && <p className="text-sm text-muted-foreground">Đang tải...</p>}
                 {category.items.map((item) => (
                   <div key={item} className="flex items-center space-x-2">
                     <Checkbox
@@ -84,6 +147,6 @@ export function CategoryFilter() {
           </div>
         ))}
       </div>
-    </div>
-  )
+    </aside>
+  );
 }
