@@ -11,7 +11,8 @@ interface LoginResponse {
   codeName: string
   desc: string
   result?: {
-    token: string
+    access_token: string
+    refresh_token: string
   }
 }
 
@@ -48,11 +49,11 @@ export function LoginForm() {
       const data: LoginResponse = await response.json()
 
       if (response.ok && data.code === 1000) {
-        const token = data.result?.token
-        if (token) {
-          localStorage.setItem("access_token", token)
+        if (data.result) {
+        //Save tokens to localStorage
+        localStorage.setItem("access_token", data.result.access_token);
+        localStorage.setItem("refresh_token", data.result.refresh_token);
         }
-
         toast({
           title: "Đăng nhập thành công",
           description: "Chào mừng bạn đến với Vticket!",

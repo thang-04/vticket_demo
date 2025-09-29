@@ -41,7 +41,8 @@ public class LoginService {
             if (tokenValidationResult != null && !Objects.equals(tokenValidationResult.getId(), String.valueOf(Config.CODE.ERROR_CODE_103))) {
                 logger.info("Token is still valid for user: {}", request.getUsername());
                 return AuthenticationResponse.builder()
-                        .token(user.getAccess_token())
+                        .access_token(user.getAccess_token())
+                        .refresh_token(user.getRefresh_token())
                         .build();
             } else {
                 // Token is expired or invalid
@@ -54,7 +55,8 @@ public class LoginService {
         }
 
         return AuthenticationResponse.builder()
-                .token(user.getAccess_token())
+                .access_token(user.getAccess_token())
+                .refresh_token(user.getRefresh_token())
                 .build();
     }
 

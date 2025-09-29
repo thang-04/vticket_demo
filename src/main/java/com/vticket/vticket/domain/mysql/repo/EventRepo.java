@@ -100,19 +100,16 @@ public class EventRepo {
         String logPrefix = "getEventsByCategory|categoryId=" + categoryId;
         try {
             String sql = "SELECT e.event_id, e.title, e.description, e.price, e.venue, " +
-                    "e.start_time, e.end_time, e.created_at, e.category_category_id " +
+                    "e.start_time, e.end_time, e.created_at, e.category_category_id , " +
+                    "c.category_id, c.name as category_name, c.description as category_description " +
                     "FROM events e " +
+                    "LEFT JOIN categories c ON e.category_category_id = c.category_id " +
                     "WHERE e.category_category_id = :categoryId " +
                     "ORDER BY e.start_time ASC";
             MapSqlParameterSource params = new MapSqlParameterSource();
             params.addValue("categoryId", categoryId);
 
-            return jdbcTemplate.query(sql, params, new RowMapper<Event>() {
-                @Override
-                public Event mapRow(ResultSet rs, int rowNum) throws SQLException {
-                    return mapEventFromResultSet(rs);
-                }
-            });
+            return jdbcTemplate.query(sql, params, (rs, rowNum) -> mapEventFromResultSet(rs));
         } catch (Exception ex) {
             logger.error("{}|Exception|{}" + logPrefix + ex.getMessage(), ex);
         }
@@ -269,6 +266,15 @@ public class EventRepo {
         event.setStart_time(rs.getTimestamp("start_time"));
         event.setEnd_time(rs.getTimestamp("end_time"));
         event.setCreated_at(rs.getTimestamp("created_at"));
+
+        if (rs.getObject("category_id") != null) {
+            Category category = new Category();
+            category.setCategory_id(rs.getLong("category_id"));
+            category.setName(rs.getString("category_name"));
+            category.setDescription(rs.getString("category_description"));
+            event.setCategory(category);
+        }
+
         return event;
     }
 }

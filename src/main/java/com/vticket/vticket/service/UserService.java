@@ -297,24 +297,36 @@ public class UserService {
     }
 
     public UserResponse getMyInfo() {
+        long start = System.currentTimeMillis();
         var context = SecurityContextHolder.getContext();
         // username from context is sub in jwt token
         String username = context.getAuthentication().getName();
         logger.info("Get info authentication for username: {}", username);
         User user = userCollection.getUserInfoByUserName(username);
+        logger.info("Retrieved user info for {}: {} with time: {}ms", username, user, (System.currentTimeMillis() - start));
         if (user == null) {
             logger.info("User not found in context: {}", username);
-            throw new RuntimeException("User not found with username: " + username);
+            return null;
         }
-
         return userMapper.toResponse(user);
     }
 
     public boolean updateUserProfile(String userId, UserUpdateRequest req, MultipartFile avatar) throws IOException {
         long start = System.currentTimeMillis();
         logger.info("Updating user profile for user ID: {} with data: {}", userId, gson.toJson(req));
-        String filePathImg = fileUploadService.uploadFileImg(avatar);
-        logger.info("File upload completed with path:{} in {} ms", filePathImg, (System.currentTimeMillis() - start));
+        String filePathImg = null;
+
+        if (avatar != null && !avatar.isEmpty()) {
+            logger.info("New avatar file detected for user {}. Uploading...", userId);
+            filePathImg = fileUploadService.uploadFileImg(avatar);
+
+            if (filePathImg == null) {
+                logger.error("Avatar upload failed for user {}. Aborting profile update.", userId);
+                return false;
+            }
+        } else {
+            logger.info("No new avatar file provided for user {}. Skipping image upload.", userId);
+        }
         return userCollection.updateUserInfo(userId, req, filePathImg);
     }
 

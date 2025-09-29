@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { fetchWithAuth } from "@/app/api";
 import {
   Dialog,
   DialogContent,
@@ -102,23 +103,13 @@ export function UserProfile() {
 
   useEffect(() => {
     const fetchUserData = async () => {
-      const token = localStorage.getItem("access_token");
-      if (!token) {
-        setError("Vui lòng đăng nhập để xem thông tin.");
-        setLoading(false);
-        // window.location.href = "/login";
-        return;
-      }
-
-      try {
-        const response = await fetch("http://localhost:8080/vticket/api/users", {
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
+       try {
+        const response = await fetchWithAuth("http://localhost:8080/vticket/api/users", {
         });
 
         if (!response.ok) {
-           throw new Error(`HTTP error! status: ${response.status}`);
+           const errorData = await response.json().catch(() => ({})); 
+            throw new Error(errorData.desc || `HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
@@ -129,7 +120,7 @@ export function UserProfile() {
                 email: apiUser.email,
                 location: apiUser.address,
                 joinDate: formatDate(apiUser.createdAt),
-                avatar: apiUser.avatar ? `http://localhost:8080${apiUser.avatar}` : "/diverse-user-avatars.png",
+                avatar: apiUser.avatar ? `http://localhost:8080/vticket${apiUser.avatar}` : "/diverse-user-avatars.png",
                 phone: "+84 987 654 321", 
                 totalTickets: 12,
                 upcomingEvents: 3,
@@ -221,7 +212,7 @@ export function UserProfile() {
             email: updatedApiUser.email,
             location: updatedApiUser.address,
             joinDate: formatDate(updatedApiUser.created_at),
-            avatar: `http://localhost:8080${updatedApiUser.avatar}`,
+            avatar: `http://localhost:8080/vticket${updatedApiUser.avatar}`,
             phone: user?.phone || "+84 987 654 321",
             totalTickets: user?.totalTickets || 12,
             upcomingEvents: user?.upcomingEvents || 3,

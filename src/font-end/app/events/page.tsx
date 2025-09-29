@@ -1,33 +1,52 @@
 "use client";
-import React, { useState, useEffect } from "react";
-import { ChevronDown } from "lucide-react";
-import { EventCard } from "@/components/event-card";
-import { CategoryFilter } from "@/components/category-filter";
+import React, { useState, useEffect, FC } from "react";
+import { ChevronDown, Calendar, MapPin, Ticket } from "lucide-react";
 
-// Định nghĩa kiểu dữ liệu cho dữ liệu Event từ API
+// --- Category Interface ---
 interface Category {
   id: number;
   name: string;
 }
 
-interface EventData {
-  event_id: number;
+// --- EventCard Component ---
+interface EventCardProps {
   title: string;
-  start_time: string;
+  startTime: string;
   venue: string;
   price: number;
-  category: Category;
+  categoryName: string;
 }
 
+const EventCard: FC<EventCardProps> = ({ title, startTime, venue, price, categoryName }) => (
+  <div className="bg-card border rounded-lg overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300">
+    <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
+        <span className="text-gray-500">Event Image</span>
+    </div>
+    <div className="p-4">
+      <p className="text-sm font-semibold text-blue-500 mb-1">{categoryName}</p>
+      <h3 className="text-lg font-bold truncate">{title}</h3>
+      <div className="text-muted-foreground text-sm mt-2 space-y-1">
+        <p className="flex items-center"><Calendar className="w-4 h-4 mr-2" />{new Date(startTime).toLocaleString()}</p>
+        <p className="flex items-center"><MapPin className="w-4 h-4 mr-2" />{venue}</p>
+        <p className="flex items-center font-semibold text-foreground"><Ticket className="w-4 h-4 mr-2" />{price.toLocaleString('vi-VN')} VNĐ</p>
+      </div>
+    </div>
+  </div>
+);
 
-// Components giả lập (để ví dụ có thể chạy được)
-const Header: React.FC = () => (
+// --- Header Component ---
+const Header: FC = () => (
   <header className="bg-card border-b p-4">
     <h1 className="text-2xl font-bold">V-Ticket</h1>
   </header>
 );
 
-const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ children, ...props }) => (
+// --- Button Component ---
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+    children: React.ReactNode;
+}
+
+const Button: FC<ButtonProps> = ({ children, ...props }) => (
   <button
     {...props}
     className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
@@ -36,16 +55,110 @@ const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement>> = ({ child
   </button>
 );
 
+// --- CategoryFilter Component ---
+// This component now receives the categories list as a prop
+interface CategoryFilterProps {
+  categories: Category[];
+  selectedCategories: number[];
+  onCategoryChange: (newCategories: number[]) => void;
+}
+
+const CategoryFilter: FC<CategoryFilterProps> = ({ categories, selectedCategories, onCategoryChange }) => {
+    
+    const handleCheckboxChange = (categoryId: number) => {
+        const newSelection = selectedCategories.includes(categoryId)
+            ? selectedCategories.filter(id => id !== categoryId)
+            : [...selectedCategories, categoryId];
+        onCategoryChange(newSelection);
+    };
+
+    if (!categories.length) {
+        return <div className="p-4 border rounded-lg bg-card">Đang tải danh mục...</div>
+    }
+
+    return (
+        <div className="w-full lg:w-64">
+            <h2 className="text-lg font-semibold mb-4">Danh mục</h2>
+            <div className="space-y-2">
+                {categories.map((category) => (
+                    <div key={category.id} className="flex items-center">
+                        <input
+                            type="checkbox"
+                            id={`category-${category.id}`}
+                            checked={selectedCategories.includes(category.id)}
+                            onChange={() => handleCheckboxChange(category.id)}
+                            className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <label htmlFor={`category-${category.id}`} className="ml-2 block text-sm text-foreground">
+                            {category.name}
+                        </label>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+};
+
+
+//=========== MAIN PAGE COMPONENT (Fixed) ===========
+
+interface EventData {
+  event_id: number;
+  title: string;
+  start_time: string;
+  venue: string;
+  price: number;
+  category?: Category; 
+}
+
 export default function EventsPage() {
   const [events, setEvents] = useState<EventData[]>([]);
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
 
+  // Effect to fetch all categories once on component mount
+  useEffect(() => {
+    const fetchAllCategories = async () => {
+        try {
+            const response = await fetch("http://localhost:8080/vticket/event/categories");
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+             if (data && data.code === 1000 && Array.isArray(data.result)) {
+                const mappedCategories = data.result.map((cat: any) => ({
+                    id: cat.category_id || cat.id || cat.categoryId,
+                    name: cat.name || cat.categoryName
+                }));
+                setAllCategories(mappedCategories);
+            } else {
+                throw new Error("Invalid data structure for categories");
+            }
+        } catch (e: any) {
+            console.error("Failed to fetch categories:", e);
+            // You might want to set a specific error state for categories here
+        }
+    };
+    fetchAllCategories();
+  }, []);
+
+  // Effect to fetch events whenever selectedCategories changes
   useEffect(() => {
     const fetchEvents = async () => {
       try {
         setLoading(true);
-        const response = await fetch("http://localhost:8080/vticket/event/list");
+        setError(null);
+        
+        let url = "http://localhost:8080/vticket/event/list";
+        
+        if (selectedCategories.length > 0) {
+          const categoryIds = selectedCategories.join(',');
+          url = `http://localhost:8080/vticket/event/search?cateId=${categoryIds}`;
+        }
+
+        const response = await fetch(url);
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
@@ -53,19 +166,27 @@ export default function EventsPage() {
 
         if (data && data.code === 1000 && Array.isArray(data.result)) {
           setEvents(data.result);
+        } else if (data.code !== 1000) {
+           setEvents([]);
+           console.warn(`API returned code ${data.code}: ${data.desc}`);
         } else {
           throw new Error("Invalid data structure from API");
         }
       } catch (e: any) {
         console.error("Failed to fetch events:", e);
         setError(e.message);
+        setEvents([]); 
       } finally {
         setLoading(false);
       }
     };
 
     fetchEvents();
-  }, []);
+  }, [selectedCategories]); 
+
+  const handleCategoryChange = (newCategories: number[]) => {
+    setSelectedCategories(newCategories);
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -77,8 +198,12 @@ export default function EventsPage() {
           <span className="text-foreground">Khám phá dịch vụ</span>
         </div>
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Component CategoryFilter thật được sử dụng ở đây */}
-          <CategoryFilter />
+          <CategoryFilter 
+            categories={allCategories}
+            selectedCategories={selectedCategories}
+            onCategoryChange={handleCategoryChange}
+          />
+
           <div className="flex-1">
             <div className="flex items-center justify-between mb-6">
               <h1 className="text-xl font-semibold text-foreground">Kết quả tìm kiếm:</h1>
@@ -97,26 +222,42 @@ export default function EventsPage() {
             {!loading && !error && (
               <>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {events.map((event) => (
-                    <EventCard
-                      key={event.event_id}
-                      id={event.event_id}
-                      title={event.title}
-                      startTime={event.start_time}
-                      venue={event.venue}
-                      price={event.price}
-                      image={null}
-                      categoryName={event.category.name}
-                    />
-                  ))}
+                  {events.map((event) => {
+                    let categoryName = 'N/A'; // Default value
+
+                    if (event.category) {
+                        // Case 1: Data from /list endpoint which includes category object
+                        categoryName = event.category.name;
+                    } else if (selectedCategories.length === 1) {
+                        // Case 2: Data from /search endpoint with only ONE category selected
+                        const categoryId = selectedCategories[0];
+                        const foundCategory = allCategories.find(c => c.id === categoryId);
+                        if (foundCategory) {
+                            categoryName = foundCategory.name;
+                        }
+                    }
+                  
+                    return (
+                        <EventCard
+                          key={event.event_id}
+                          title={event.title}
+                          startTime={event.start_time}
+                          venue={event.venue}
+                          price={event.price}
+                          categoryName={categoryName}
+                        />
+                    );
+                  })}
                 </div>
-                <div className="flex justify-center mt-8">
-                  <Button>Xem thêm sự kiện</Button>
-                </div>
+                 {events.length === 0 && (
+                    <p className="text-center text-muted-foreground mt-8">Không tìm thấy sự kiện nào phù hợp.</p>
+                )}
+                {events.length > 0 && (
+                    <div className="flex justify-center mt-8">
+                        <Button>Xem thêm sự kiện</Button>
+                    </div>
+                )}
               </>
-            )}
-            {!loading && !error && events.length === 0 && (
-              <p>Không tìm thấy sự kiện nào.</p>
             )}
           </div>
         </div>

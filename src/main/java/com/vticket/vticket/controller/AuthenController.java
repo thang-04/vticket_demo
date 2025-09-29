@@ -108,7 +108,8 @@ public class AuthenController {
                     user = userService.refreshToken(user.getId());
                     logger.info("Token refresh successful for userId: {}", userVerifyAccessToken.getId());
                     var result = AuthenticationResponse.builder()
-                            .token(user.getAccess_token())
+                            .access_token(user.getAccess_token())
+                            .refresh_token(user.getRefresh_token())
                             .build();
 
                     return ResponseJson.success("Token refresh successful", result);

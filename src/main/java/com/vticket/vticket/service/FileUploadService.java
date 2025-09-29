@@ -20,9 +20,9 @@ public class FileUploadService {
 
     public String uploadFileImg(MultipartFile file) throws IOException {
         long startTime = System.currentTimeMillis();
-        if (file.isEmpty()) {
-            logger.info("Attempted to upload an empty file.");
-            return "/";
+        if (file == null || file.isEmpty()) {
+            logger.info("Attempted to upload a null or empty file.");
+            return null; // Trả về null
         }
 
         String contentType = file.getContentType();
