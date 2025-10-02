@@ -2,6 +2,7 @@ package com.vticket.vticket.domain.mysql.repo;
 
 import com.vticket.vticket.domain.mysql.entity.Category;
 import com.vticket.vticket.domain.mysql.entity.Event;
+import io.micrometer.common.util.StringUtils;
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Repository;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 
 @Repository
@@ -175,29 +177,59 @@ public class EventRepo {
 //        return null;
 //    }
 
-    public boolean updateEvent(Event event) {
-        String logPrefix = "updateEvent|eventId=" + event.getEvent_id();
+    public boolean updateEventDynamic(Event event) {
+        String logPrefix = "updateEventDynamic|eventId=" + event.getEvent_id();
         try {
-            String sql = "UPDATE events SET title = :title, description = :description, price = :price, " +
-                    "venue = :venue, start_time = :startTime, end_time = :endTime, category_category_id = :categoryId " +
-                    "WHERE event_id = :eventId";
             MapSqlParameterSource params = new MapSqlParameterSource();
-            params.addValue("title", event.getTitle());
-            params.addValue("description", event.getDescription());
-            params.addValue("price", event.getPrice());
-            params.addValue("venue", event.getVenue());
-            params.addValue("startTime", event.getStart_time());
-            params.addValue("endTime", event.getEnd_time());
-            params.addValue("categoryId", event.getCategory() != null ? event.getCategory().getCategory_id() : null);
             params.addValue("eventId", event.getEvent_id());
 
-            int rowsAffected = jdbcTemplate.update(sql, params);
+            StringBuilder sql = new StringBuilder("UPDATE events SET updated_at = NOW()");
+
+            if (event.getTitle() != null && !event.getTitle().isEmpty()) {
+                sql.append(", title = :title");
+                params.addValue("title", event.getTitle());
+            }
+
+            if (event.getDescription() != null && !event.getDescription().isEmpty()) {
+                sql.append(", description = :description");
+                params.addValue("description", event.getDescription());
+            }
+
+            if (event.getPrice() != null) {
+                sql.append(", price = :price");
+                params.addValue("price", event.getPrice());
+            }
+
+            if (event.getVenue() != null && !event.getVenue().isEmpty()) {
+                sql.append(", venue = :venue");
+                params.addValue("venue", event.getVenue());
+            }
+
+            if (event.getStart_time() != null) {
+                sql.append(", start_time = :startTime");
+                params.addValue("startTime", event.getStart_time());
+            }
+
+            if (event.getEnd_time() != null) {
+                sql.append(", end_time = :endTime");
+                params.addValue("endTime", event.getEnd_time());
+            }
+
+            if (event.getCategory() != null && event.getCategory().getCategory_id() != null) {
+                sql.append(", category_category_id = :categoryId");
+                params.addValue("categoryId", event.getCategory().getCategory_id());
+            }
+
+            sql.append(" WHERE event_id = :eventId");
+
+            int rowsAffected = jdbcTemplate.update(sql.toString(), params);
             return rowsAffected > 0;
         } catch (Exception ex) {
             logger.error("{}|Exception|{}" + logPrefix + ex.getMessage(), ex);
         }
         return false;
     }
+
 
     /**
      * Delete event
@@ -220,41 +252,38 @@ public class EventRepo {
     /**
      * Search events by title or description
      */
-    public List<Event> searchEvents(String keyword) {
-        String logPrefix = "searchEvents|keyword=" + keyword;
-        try {
-            String sql = "SELECT e.event_id, e.title, e.description, e.price, e.venue, " +
-                    "e.start_time, e.end_time, e.created_at, e.category_category_id, " +
-                    "c.category_id, c.name as category_name, c.description as category_description " +
-                    "FROM events e " +
-                    "LEFT JOIN categories c ON e.category_category_id = c.category_id " +
-                    "WHERE e.title LIKE :keyword OR e.description LIKE :keyword " +
-                    "ORDER BY e.start_time ASC";
-            MapSqlParameterSource params = new MapSqlParameterSource();
+    public List<Event> searchEventsDynamic(String keyword, Long categoryId, Date start, Date end) {
+        StringBuilder sql = new StringBuilder(
+                "SELECT e.event_id, e.title, e.description, e.price, e.venue, " +
+                        "e.start_time, e.end_time, e.created_at, e.category_category_id, " +
+                        "c.category_id, c.name as category_name, c.description as category_description " +
+                        "FROM events e LEFT JOIN categories c ON e.category_category_id = c.category_id WHERE 1=1"
+        );
+
+        MapSqlParameterSource params = new MapSqlParameterSource();
+
+        if (StringUtils.isNotBlank(keyword)) {
+            sql.append(" AND (e.title LIKE :keyword OR e.description LIKE :keyword)");
             params.addValue("keyword", "%" + keyword + "%");
-
-            return jdbcTemplate.query(sql, params, new RowMapper<Event>() {
-                @Override
-                public Event mapRow(ResultSet rs, int rowNum) throws SQLException {
-                    Event event = mapEventFromResultSet(rs);
-
-                    // Map category if exists
-                    if (rs.getLong("category_category_id") > 0) {
-                        Category category = new Category();
-                        category.setCategory_id(rs.getLong("category_id"));
-                        category.setName(rs.getString("category_name"));
-                        category.setDescription(rs.getString("category_description"));
-                        event.setCategory(category);
-                    }
-
-                    return event;
-                }
-            });
-        } catch (Exception ex) {
-            logger.error("{}|Exception|{}" + logPrefix + ex.getMessage(), ex);
         }
-        return new ArrayList<>();
+        if (categoryId != null) {
+            sql.append(" AND e.category_category_id = :categoryId");
+            params.addValue("categoryId", categoryId);
+        }
+        if (start != null) {
+            sql.append(" AND e.start_time >= :start");
+            params.addValue("start", start);
+        }
+        if (end != null) {
+            sql.append(" AND e.end_time <= :end");
+            params.addValue("end", end);
+        }
+
+        sql.append(" ORDER BY e.start_time ASC");
+
+        return jdbcTemplate.query(sql.toString(), params, (rs, rowNum) -> mapEventFromResultSet(rs));
     }
+
 
     private Event mapEventFromResultSet(ResultSet rs) throws SQLException {
         Event event = new Event();

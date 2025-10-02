@@ -1,4 +1,4 @@
-package com.vticket.vticket.config;
+package com.vticket.vticket.config.redis;
 
 public class RedisKey {
     public static final String REDIS_LIST_CATEGORY = "vt:list:cate";

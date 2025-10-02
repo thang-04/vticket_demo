@@ -1,6 +1,6 @@
 package com.vticket.vticket.service;
 
-import com.vticket.vticket.config.RedisKey;
+import com.vticket.vticket.config.redis.RedisKey;
 import com.vticket.vticket.domain.mongodb.entity.User;
 import lombok.Getter;
 import lombok.Setter;

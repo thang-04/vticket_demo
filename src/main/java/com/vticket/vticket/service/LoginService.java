@@ -25,7 +25,11 @@ public class LoginService {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private EmailService emailService;
+
     public AuthenticationResponse authentication(AuthenticationRequest request) {
+        long start = System.currentTimeMillis();
         logger.info("Authenticating user: {}", request.getUsername());
 
         User user = userService.getUserByUserName(request.getUsername());
@@ -51,6 +55,10 @@ public class LoginService {
             }
         } else {
             logger.info("No existing token for user: {}, creating new token", request.getUsername());
+
+            // First time login, send welcome email
+            emailService.sendWelcomeEmail(user);
+
             user = userService.refreshToken(user.getId());
         }
 

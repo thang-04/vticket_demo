@@ -1,4 +1,4 @@
-package com.vticket.vticket.config;
+package com.vticket.vticket.config.redis;
 
 
 import java.util.Date;
@@ -6,7 +6,6 @@ import java.util.Map;
 import javax.crypto.spec.SecretKeySpec;
 import javax.xml.bind.DatatypeConverter;
 
-import com.vticket.vticket.service.JwtService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;

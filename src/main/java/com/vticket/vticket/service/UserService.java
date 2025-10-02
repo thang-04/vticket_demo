@@ -1,7 +1,7 @@
 package com.vticket.vticket.service;
 
 import com.google.gson.reflect.TypeToken;
-import com.vticket.vticket.config.RedisKey;
+import com.vticket.vticket.config.redis.RedisKey;
 import com.vticket.vticket.domain.mongodb.entity.Role;
 import com.vticket.vticket.domain.mongodb.entity.User;
 import com.vticket.vticket.domain.mongodb.repo.RoleCollection;

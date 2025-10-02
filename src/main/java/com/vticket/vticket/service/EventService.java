@@ -1,7 +1,7 @@
 package com.vticket.vticket.service;
 
 import com.google.gson.reflect.TypeToken;
-import com.vticket.vticket.config.RedisKey;
+import com.vticket.vticket.config.redis.RedisKey;
 import com.vticket.vticket.domain.mysql.entity.Event;
 import com.vticket.vticket.domain.mysql.repo.EventRepo;
 import io.micrometer.common.util.StringUtils;
@@ -118,7 +118,7 @@ public class EventService {
         return null;
     }
 
-    public List<Event> getEventsByCategory(List<Long> categoryId) {
+    public List<Event> getEventsByCategoryId(List<Long> categoryId) {
         long start = System.currentTimeMillis();
         List<Event> listEvents = new ArrayList<>();
 

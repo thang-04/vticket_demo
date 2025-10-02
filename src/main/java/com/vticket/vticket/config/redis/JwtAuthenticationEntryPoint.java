@@ -1,4 +1,4 @@
-package com.vticket.vticket.config;
+package com.vticket.vticket.config.redis;
 
 import java.io.IOException;
 

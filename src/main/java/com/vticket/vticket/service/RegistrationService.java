@@ -1,9 +1,8 @@
 package com.vticket.vticket.service;
 
-import com.vticket.vticket.config.RedisKey;
+import com.vticket.vticket.config.redis.RedisKey;
 import com.vticket.vticket.domain.mongodb.entity.User;
 import com.vticket.vticket.dto.request.OtpVerifyRequest;
-import com.vticket.vticket.dto.request.UserCreationRequest;
 import io.micrometer.common.util.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

@@ -85,7 +85,7 @@ public class EventController {
                     .map(Long::parseLong)
                     .toList();
 
-            List<Event> events = eventService.getEventsByCategory(categoryIds);
+            List<Event> events = eventService.getEventsByCategoryId(categoryIds);
             if (events != null) {
                 logger.info("searchEvents|Success|Category ID: {}|Total events: {}|Time taken: {} ms" , categoryId, events.size(), (System.currentTimeMillis() - start));
                 return ResponseJson.success("Search events by category", events);
