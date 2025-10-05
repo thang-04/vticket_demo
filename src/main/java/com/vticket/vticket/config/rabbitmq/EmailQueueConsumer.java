@@ -5,6 +5,7 @@ import com.vticket.vticket.domain.mongodb.repo.UserCollection;
 import com.vticket.vticket.dto.message.LoginEventMessage;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import com.vticket.vticket.service.MessageService;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.SimpleMailMessage;
@@ -19,6 +20,8 @@ public class EmailQueueConsumer {
     private JavaMailSender mailSender;
     @Autowired
     private UserCollection userCollection;
+    @Autowired
+    private MessageService messageService;
 
     //Auto listener message from queue
     @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME + "1")
@@ -31,15 +34,8 @@ public class EmailQueueConsumer {
             return;
         }
 
-        String subject = "Chào mừng " + user.getFull_name();
-        String body = "Xin chào " + user.getFull_name() + ",\n\n" +
-                "Cảm ơn bạn đã đăng ký tài khoản tại VTicket vào lúc " + payload.getLoginTime() +
-                "\n\nChúng tôi rất vui được chào đón bạn đến với cộng đồng của chúng tôi." +
-                "\nHãy khám phá các sự kiện hấp dẫn và tận hưởng những trải nghiệm tuyệt vời cùng VTicket." +
-                "\nNếu bạn có bất kỳ câu hỏi nào, đừng ngần ngại liên hệ với chúng tôi." +
-                "\n\nChúc bạn có những trải nghiệm tuyệt vời!" +
-                "\nTrân trọng," +
-                "\nĐội ngũ VTicket";
+        String subject = messageService.get("email.welcome.subject", user.getFull_name());
+        String body = messageService.get("email.welcome.body", user.getFull_name(), payload.getLoginTime());
 
         // send email
         SimpleMailMessage mail = new SimpleMailMessage();

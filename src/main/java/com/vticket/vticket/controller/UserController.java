@@ -3,13 +3,11 @@ package com.vticket.vticket.controller;
 
 import com.vticket.vticket.config.Config;
 import com.vticket.vticket.domain.mongodb.entity.User;
-import com.vticket.vticket.dto.request.OtpVerifyRequest;
 import com.vticket.vticket.dto.request.UserCreationRequest;
 import com.vticket.vticket.dto.request.UserUpdateRequest;
 import com.vticket.vticket.dto.response.UserResponse;
 import com.vticket.vticket.exception.ErrorCode;
 import com.vticket.vticket.service.RedisService;
-import com.vticket.vticket.service.RegistrationService;
 import com.vticket.vticket.service.UserService;
 import com.vticket.vticket.utils.ResponseJson;
 import jakarta.validation.Valid;
@@ -50,7 +48,9 @@ public class UserController {
         try {
             UserResponse userrespone = userService.createNewUser(user);
             if (userrespone == null) {
-                return ResponseJson.of(ErrorCode.USER_EXISTED, "User existed");
+                // OTP sent, waiting for verification before inserting user
+                logger.info("OTP sent for user registration: " + user.getEmail());
+                return ResponseJson.success("OTP sent. Please verify to complete registration", null);
             }
             logger.info("User created successfully: " + userrespone);
             return ResponseJson.success("Create user successful", userrespone);
@@ -79,7 +79,6 @@ public class UserController {
 
     @GetMapping("/{id}")
     public String getUserById(@PathVariable String id) {
-        long startTime = System.currentTimeMillis();
         logger.info("Received request to get user by id:  " + id);
         try {
             UserResponse userrespone = userService.getUserByUId(id);

@@ -2,6 +2,8 @@ package com.vticket.vticket.service;
 
 import com.vticket.vticket.config.redis.RedisKey;
 import com.vticket.vticket.domain.mongodb.entity.User;
+import com.vticket.vticket.domain.mongodb.repo.UserCollection;
+import static com.vticket.vticket.utils.CommonUtils.gson;
 import com.vticket.vticket.dto.request.OtpVerifyRequest;
 import io.micrometer.common.util.StringUtils;
 import org.apache.logging.log4j.LogManager;
@@ -22,12 +24,14 @@ public class RegistrationService {
     private EmailService emailService;
     @Autowired
     private RedisService redisService;
+    @Autowired
+    private UserCollection userCollection;
 
     public boolean sendRegistrationOtp(User user) {
         long start = System.currentTimeMillis();
         String otp = generateOtp();
-        String localPart = user.getEmail().split("@")[0];
-        String key = String.format(RedisKey.OTP_EMAIL, localPart);
+        String emailKey = user.getEmail() == null ? null : user.getEmail().trim().toLowerCase();
+        String key = String.format(RedisKey.OTP_EMAIL, emailKey);
 
         try {
             emailService.sendOtp(user.getEmail(), otp);
@@ -50,8 +54,8 @@ public class RegistrationService {
 
     public boolean verifyOtp(OtpVerifyRequest request) {
         long start = System.currentTimeMillis();
-        String localPart = request.getEmail().split("@")[0];
-        String key = String.format(RedisKey.OTP_EMAIL, localPart);
+        String emailKey = request.getEmail() == null ? null : request.getEmail().trim().toLowerCase();
+        String key = String.format(RedisKey.OTP_EMAIL, emailKey);
 
         try {
             String cachedOtp = redisService.getRedisSsoUser().opsForValue().get(key);
@@ -61,9 +65,24 @@ public class RegistrationService {
                 return false; // OTP expired or not found
             }
 
-            if (cachedOtp.equals(request.getOtp())) {
-//                redisService.getRedisSsoUser().delete(key);
-                logger.info("OTP verified successfully for email {}", request.getEmail());
+            if (request.getOtp() != null && request.getOtp().equals(cachedOtp)) {
+                // fetch pending user by full email
+                String pendingKey = String.format(RedisKey.PENDING_USER_EMAIL, emailKey);
+                String pendingUserJson = redisService.getRedisSsoUser().opsForValue().get(pendingKey);
+                if (StringUtils.isEmpty(pendingUserJson)) {
+                    logger.warn("No pending user found for email {} despite valid OTP", request.getEmail());
+                    return false;
+                }
+                User user = gson.fromJson(pendingUserJson, User.class);
+                // insert user to mongo
+                User savedUser = userCollection.insertUser(user);
+                // cache user info directly and cleanup keys
+                String userKey = RedisKey.USER_ID + savedUser.getId();
+                redisService.getRedisSsoUser().opsForValue().set(userKey, gson.toJson(savedUser));
+                redisService.getRedisSsoUser().expire(userKey, 30L, TimeUnit.MINUTES);
+                redisService.getRedisSsoUser().delete(pendingKey);
+                redisService.getRedisSsoUser().delete(key);
+                logger.info("OTP verified and user inserted for email {} with userId {}", request.getEmail(), savedUser.getId());
                 return true;
             } else {
                 logger.warn("Invalid OTP for email {}", request.getEmail());

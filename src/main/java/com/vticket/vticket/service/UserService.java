@@ -41,8 +41,6 @@ public class UserService {
     @Autowired
     PasswordEncoder passwordEncoder;
     @Autowired
-    private ProcessUserService processUserService;
-    @Autowired
     private JwtService jwtService;
     @Autowired
     private RedisService redisService;
@@ -85,15 +83,14 @@ public class UserService {
 
 //            processUserService.enQueueUser(user);
 
-                // send otp
+                // send otp and store pending user in redis (by email local part)
                 if (registrationService.sendRegistrationOtp(user)) {
-                    // add user to mongo
-                    User savedUser = userCollection.insertUser(user);
-                    logger.info("Successfully created user: {} with ID: {} and time: {}", userCreationRequest.getUsername(), savedUser.getId(), (System.currentTimeMillis() - start));
-                    // add user to redis
-                    putUserInfoToRedis(savedUser);
-
-                    return userMapper.toResponse(savedUser);
+                    String emailKey = user.getEmail() == null ? null : user.getEmail().trim().toLowerCase();
+                    String pendingKey = String.format(RedisKey.PENDING_USER_EMAIL, emailKey);
+                    redisService.getRedisSsoUser().opsForValue().set(pendingKey, gson.toJson(user));
+                    redisService.getRedisSsoUser().expire(pendingKey, 10L, TimeUnit.MINUTES);
+                    logger.info("Stored pending user for email {}. Waiting for OTP verification.", user.getEmail());
+                    return null;
                 }
             }
         } catch (Exception e) {
@@ -312,7 +309,6 @@ public class UserService {
     }
 
     public boolean updateUserProfile(String userId, UserUpdateRequest req, MultipartFile avatar) throws IOException {
-        long start = System.currentTimeMillis();
         logger.info("Updating user profile for user ID: {} with data: {}", userId, gson.toJson(req));
         String filePathImg = null;
 
