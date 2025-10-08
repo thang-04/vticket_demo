@@ -18,8 +18,7 @@ public class RabbitMQConfig {
 
     @Bean
     public Queue emailQueue() {
-        Queue queue = new Queue(QUEUE_NAME, true);
-        return queue; // durable = true để lưu queue nếu server restart
+        return new Queue(QUEUE_NAME, true); // durable = true để lưu queue nếu server restart
     }
 
     @Bean

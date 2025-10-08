@@ -83,12 +83,12 @@ public class UserService {
 
 //            processUserService.enQueueUser(user);
 
-                // send otp and store pending user in redis (by email local part)
+                // send otp and store pending user in redis
                 if (registrationService.sendRegistrationOtp(user)) {
                     String emailKey = user.getEmail() == null ? null : user.getEmail().trim().toLowerCase();
                     String pendingKey = String.format(RedisKey.PENDING_USER_EMAIL, emailKey);
                     redisService.getRedisSsoUser().opsForValue().set(pendingKey, gson.toJson(user));
-                    redisService.getRedisSsoUser().expire(pendingKey, 10L, TimeUnit.MINUTES);
+                    redisService.getRedisSsoUser().expire(pendingKey, 10L, TimeUnit.MINUTES);//10p
                     logger.info("Stored pending user for email {}. Waiting for OTP verification.", user.getEmail());
                     return null;
                 }

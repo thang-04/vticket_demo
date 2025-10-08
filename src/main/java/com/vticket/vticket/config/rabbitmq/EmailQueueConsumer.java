@@ -24,7 +24,7 @@ public class EmailQueueConsumer {
     private MessageService messageService;
 
     //Auto listener message from queue
-    @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME + "1")
+    @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME )
     public void receiveEmailMessage(LoginEventMessage payload) {
         // Query user info từ DB
         User user = userCollection.getUserById(payload.getUserId());

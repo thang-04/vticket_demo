@@ -79,7 +79,8 @@ public class RegistrationService {
                 // cache user info directly and cleanup keys
                 String userKey = RedisKey.USER_ID + savedUser.getId();
                 redisService.getRedisSsoUser().opsForValue().set(userKey, gson.toJson(savedUser));
-                redisService.getRedisSsoUser().expire(userKey, 30L, TimeUnit.MINUTES);
+                redisService.getRedisSsoUser().expire(userKey, 30L, TimeUnit.MINUTES);//30p
+                // cleanup pending and otp key
                 redisService.getRedisSsoUser().delete(pendingKey);
                 redisService.getRedisSsoUser().delete(key);
                 logger.info("OTP verified and user inserted for email {} with userId {}", request.getEmail(), savedUser.getId());

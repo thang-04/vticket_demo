@@ -22,9 +22,6 @@ public class CategoryService {
     private static final Logger logger = LogManager.getLogger(CategoryService.class);
 
     @Autowired
-    private JwtService jwtService;
-
-    @Autowired
     private RedisService redisService;
 
     @Autowired
