@@ -1,5 +1,6 @@
 package com.vticket.vticket.config.rabbitmq;
 
+import com.vticket.vticket.config.Config;
 import com.vticket.vticket.domain.mongodb.entity.User;
 import com.vticket.vticket.domain.mongodb.repo.UserCollection;
 import com.vticket.vticket.dto.message.LoginEventMessage;
@@ -24,26 +25,30 @@ public class EmailQueueConsumer {
     private MessageService messageService;
 
     //Auto listener message from queue
-    @RabbitListener(queues = RabbitMQConfig.QUEUE_NAME )
+    @RabbitListener(queues = Config.RABBITMQ.QUEUE_MAIL)
     public void receiveEmailMessage(LoginEventMessage payload) {
-        // Query user info từ DB
-        User user = userCollection.getUserById(payload.getUserId());
+        try {
+            // Query user info từ DB
+            User user = userCollection.getUserById(payload.getUserId());
 
-        if (user == null) {
-            logger.info("User not found for ID: " + payload.getUserId());
-            return;
+            if (user == null) {
+                logger.info("User not found for ID: " + payload.getUserId());
+                return;
+            }
+
+            String subject = messageService.get("email.welcome.subject", user.getFull_name());
+            String body = messageService.get("email.welcome.body", user.getFull_name(), payload.getLoginTime());
+
+            // send email
+            SimpleMailMessage mail = new SimpleMailMessage();
+            mail.setTo(user.getEmail());
+            mail.setSubject(subject);
+            mail.setText(body);
+            mailSender.send(mail);
+
+            System.out.println("Email sent to: " + user.getEmail());
+        } catch (Exception ex) {
+            logger.error("Error processing email message for user ID: " + payload.getUserId(), ex);
         }
-
-        String subject = messageService.get("email.welcome.subject", user.getFull_name());
-        String body = messageService.get("email.welcome.body", user.getFull_name(), payload.getLoginTime());
-
-        // send email
-        SimpleMailMessage mail = new SimpleMailMessage();
-        mail.setTo(user.getEmail());
-        mail.setSubject(subject);
-        mail.setText(body);
-        mailSender.send(mail);
-
-        System.out.println("Email sent to: " + user.getEmail());
     }
 }

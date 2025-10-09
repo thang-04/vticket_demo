@@ -2,13 +2,17 @@ package com.vticket.vticket.controller;
 
 import com.vticket.vticket.domain.mysql.entity.Category;
 import com.vticket.vticket.domain.mysql.entity.Event;
+import com.vticket.vticket.domain.mysql.entity.Seat;
+import com.vticket.vticket.dto.response.SeatStatusMessage;
 import com.vticket.vticket.exception.ErrorCode;
 import com.vticket.vticket.service.CategoryService;
 import com.vticket.vticket.service.EventService;
+import com.vticket.vticket.service.SeatService;
 import com.vticket.vticket.utils.ResponseJson;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
@@ -24,6 +28,12 @@ public class EventController {
 
     @Autowired
     private EventService eventService;
+
+    @Autowired
+    private SeatService seatService;
+
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
 
     @GetMapping("/categories")
     public String getCategories() {
@@ -57,7 +67,7 @@ public class EventController {
         }
     }
 
-    @GetMapping("{eventId}")
+    @GetMapping("/{eventId}")
     public String getEventDetail(@PathVariable Long eventId) {
         long start = System.currentTimeMillis();
         try {
@@ -97,7 +107,62 @@ public class EventController {
             logger.error("searchEvents|Exception|{}" , ex.getMessage(), ex);
             return ResponseJson.of(ErrorCode.ERROR_CODE_EXCEPTION, "An error occurred while searching for events");
         }
+    }
 
+    @GetMapping("/{eventId}/seat-chart")
+    public String getListSeats(@PathVariable("eventId") Long eventId) {
+        long start = System.currentTimeMillis();
+        try {
+            List<Seat> listSeat = seatService.getListSeat(eventId);
+            if(listSeat!= null){
+                logger.info("List Seat size: " + listSeat.size() + ", Time taken: " + (System.currentTimeMillis() - start) + "ms");
+                return ResponseJson.success("List Seat", listSeat);
+            } else {
+                logger.info("No seats retrieved.");
+                return ResponseJson.of(ErrorCode.ERROR_CODE_EXCEPTION, "No seats found");
+            }
+        }catch (Exception ex) {
+            logger.error("getListSeats|Exception|{}" , ex.getMessage(), ex);
+            return ResponseJson.of(ErrorCode.ERROR_CODE_EXCEPTION, "An error occurred while fetching seats");
+        }
+    }
+
+    @GetMapping("/{eventId}/seat/{seatId}/check")
+    public String checkSeatHold(
+            @PathVariable Long eventId,
+            @PathVariable String seatId) {
+        try {
+            List<Long> seatIds = Arrays.stream(seatId.split(","))
+                    .map(String::trim)
+                    .map(Long::parseLong)
+                    .toList();
+            List<Seat> isHeld = seatService.checkHoldSeat(seatIds);
+            if (isHeld != null && !isHeld.isEmpty()) {
+                return ResponseJson.of(ErrorCode.SEAT_UNAVAILABLE, "Seat is currently held by another user");
+            }
+            return ResponseJson.success("Seat is available");
+        } catch (Exception ex) {
+            logger.error("checkSeatHold|Exception|" + ex.getMessage(), ex);
+            return ResponseJson.of(ErrorCode.ERROR_CODE_EXCEPTION, "Error checking seat hold");
+        }
+    }
+
+    @PostMapping("/{eventId}/seat/{seatId}/hold")
+    public String holdSeat(
+            @PathVariable Long eventId,
+            @PathVariable Long seatId) {
+
+        boolean success = seatService.holdSeat(eventId, seatId);
+        if (success) {
+            // Gửi message realtime đến tất cả client khác
+            messagingTemplate.convertAndSend(
+                    "/topic/seat/" + eventId,
+                    new SeatStatusMessage(seatId, eventId, "HOLD")
+            );
+            return ResponseJson.success("Seat held successfully");
+        } else {
+            return ResponseJson.of(400, "Seat is already held or sold");
+        }
     }
 
 }

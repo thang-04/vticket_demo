@@ -27,7 +27,9 @@ public enum ErrorCode {
     OTP_EXPIRED(1018, "OTP is expired", HttpStatus.BAD_REQUEST),
     RATE_LIMIT_EXCEEDED(1019, "Rate limit exceeded", HttpStatus.TOO_MANY_REQUESTS),
     INVALID_REQUEST(1020, "Invalid request", HttpStatus.BAD_REQUEST),
-
+    SEAT_UNAVAILABLE(2001, "Seat is unavailable", HttpStatus.BAD_REQUEST),
+    PAYMENT_FAILED(3001, "Payment failed", HttpStatus.PAYMENT_REQUIRED),
+    BOOKING_NOT_FOUND(4001, "Booking not found", HttpStatus.NOT_FOUND)
     ;
 
     ErrorCode(int code, String message, HttpStatusCode statusCode) {

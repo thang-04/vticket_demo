@@ -1,5 +1,6 @@
 package com.vticket.vticket.config.rabbitmq;
 
+import com.vticket.vticket.config.Config;
 import com.vticket.vticket.dto.message.LoginEventMessage;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,8 +13,8 @@ public class EmailQueueProducer {
 
     public void sendEmailToQueue(LoginEventMessage payload) {
         rabbitTemplate.convertAndSend(
-                RabbitMQConfig.EXCHANGE_NAME,
-                RabbitMQConfig.ROUTING_KEY,
+                Config.RABBITMQ.QUEUE_MAIL,
+                Config.RABBITMQ.ROUTING_MAIL,
                 payload
         );
     }

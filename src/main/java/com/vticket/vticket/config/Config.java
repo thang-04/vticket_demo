@@ -41,11 +41,21 @@ public class Config {
         public static final String PARTNERID = "partnerId";
     }
 
-    public static final class VERIFY_TYPE {
+    public static final class RABBITMQ {
+        // MAIL MODULE
+        public static final String QUEUE_MAIL = "mail.queue";
+        public static final String EXCHANGE_MAIL = "mail.exchange";
+        public static final String ROUTING_MAIL = "mail.routing";
 
-        public static final String PHONE = "phone";
-        public static final String EMAIL = "email";
-        public static final String IDENTIFY = "identify";
+        // PAYMENT MODULE
+        public static final String QUEUE_PAYMENT = "payment.queue";
+        public static final String EXCHANGE_PAYMENT = "payment.exchange";
+        public static final String ROUTING_PAYMENT = "payment.routing";
+
+        // TICKET MODULE
+        public static final String QUEUE_TICKET = "ticket.queue";
+        public static final String EXCHANGE_TICKET = "ticket.exchange";
+        public static final String ROUTING_TICKET = "ticket.routing";
     }
 
     public static final class CODE {
