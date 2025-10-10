@@ -29,7 +29,7 @@ public class SecurityConfig {
 
     private final String[] PUBLIC_ENDPOINTS = {
             "/login", "/introspect", "/refresh", "/api/users", "/verify-otp", "/resend-otp",
-            "/event/categories", "/event/list", "/event/{eventId}", "/event/search", "/uploads/**","/tickets/list"
+            "/event/categories", "/event/list", "/event/*", "/event/search", "/uploads/**","/event/*/seat-chart","/event/*/seat/**"
     };
 
     @Bean

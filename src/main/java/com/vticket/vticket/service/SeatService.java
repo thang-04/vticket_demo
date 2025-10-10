@@ -6,6 +6,7 @@ import com.vticket.vticket.domain.mysql.entity.Event;
 import com.vticket.vticket.domain.mysql.entity.Seat;
 import com.vticket.vticket.domain.mysql.repo.SeatRepo;
 import io.micrometer.common.util.StringUtils;
+import jakarta.transaction.Transactional;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 import static com.vticket.vticket.utils.CommonUtils.gson;
@@ -21,6 +23,9 @@ import static com.vticket.vticket.utils.CommonUtils.gson;
 @Service
 public class SeatService {
     private static final Logger logger = LogManager.getLogger(SeatService.class);
+
+    private static final long SEAT_HOLD_TTL_MINUTES = 3;
+
     @Autowired
     private JwtService jwtService;
 
@@ -32,73 +37,94 @@ public class SeatService {
 
     public List<Seat> getListSeat(Long eventId) {
         long start = System.currentTimeMillis();
-        if (eventId == null || eventId <= 0) {
-            logger.info("getListSeat|Invalid eventId: " + eventId);
-            return null;
-        }
         try {
             List<Seat> seatList = seatRepo.getAllSeatByEvent(eventId);
-            logger.info("getListSeat|eventId=" + eventId + "|size=" + (seatList != null ? seatList.size() : 0)
-                    + "|time=" + (System.currentTimeMillis() - start));
-            return seatList;
-        } catch (Exception ex) {
-            logger.error("getEventById|Exception|{}", ex.getMessage(), ex);
-        }
-        return null;
-    }
+            if (seatList == null) return List.of();
 
-    public List<Seat> checkHoldSeat(List<Long> seatIds) {
-        long start = System.currentTimeMillis();
-        List<Seat> heldSeats = new ArrayList<>();
+            var redis = redisService.getRedisSsoUser();
 
-        if (seatIds == null || seatIds.isEmpty()) {
-            return heldSeats;
-        }
+            for (Seat seat : seatList) {
+                String key = RedisKey.SEAT_HOLD + eventId + "_" + seat.getId();
 
-        try {
-            String key = RedisKey.SEAT_HOLD + seatIds.toString();
-            String resultRedis = (String) redisService.getRedisSsoUser().opsForValue().get(key);
-
-            if (StringUtils.isEmpty(resultRedis)) {
-                //get from mysql
-                List<Seat> dbSeats = seatRepo.getSeatsByIds(seatIds);
-                logger.info("Fetched seats from MySQL for seatIds {}: {} found.", seatIds, dbSeats.size());
-
-                if (!dbSeats.isEmpty()) {
-                    for (Seat dbSeat : dbSeats) {
-                        Seat seat = new Seat();
-                        seat.setId(dbSeat.getId());
-                        seat.setEventId(dbSeat.getEventId());
-                        seat.setSeat_name(dbSeat.getSeat_name());
-                        seat.setRow_name(dbSeat.getRow_name());
-                        seat.setSeat_number(dbSeat.getSeat_number());
-                        seat.setColumn_number(dbSeat.getColumn_number());
-                        seat.setPrice(dbSeat.getPrice());
+                if (redis.hasKey(key)) {
+                    Set<String> first = redis.opsForZSet().range(key, 0, 0);
+                    if (first != null && !first.isEmpty()) {
+                        //config status in response
                         seat.setStatus(Seat.SeatStatus.HOLD);
-                        seat.setTicketType(dbSeat.getTicketType());
-                        heldSeats.add(seat);
                     }
-                    //cache redis
-                    redisService.getRedisSsoUser().opsForValue().set(key, gson.toJson(heldSeats));
-                    redisService.getRedisSsoUser().expire(key, 5, TimeUnit.MINUTES);
-                    logger.info("Stored seat hold status in Redis for seatIds {}: {} seats held.", seatIds, heldSeats.size());
                 }
-
-            } else {
-                // get from redis
-                heldSeats = gson.fromJson(resultRedis, new TypeToken<List<Seat>>() {}.getType());
-                logger.info("Fetched seat hold status from Redis for seatIds {}: {} found.", seatIds, heldSeats.size());
             }
-
-            logger.info("checkHoldSeat|seatIds=" + seatIds + "|size=" + heldSeats.size()
+            logger.info("getListSeat|eventId=" + eventId + "|size=" + seatList.size()
                     + "|time=" + (System.currentTimeMillis() - start) + "ms");
 
-            return heldSeats;
-
+            return seatList;
         } catch (Exception ex) {
-            logger.error("checkHoldSeat|Exception|" + ex.getMessage(), ex);
-            return new ArrayList<>();
+            logger.error("getListSeat|Exception|" + ex.getMessage(), ex);
+            return List.of();
         }
+    }
+
+    public List<Long> getHoldSeats(Long eventId, List<Long> seatIds) {
+        var redis = redisService.getRedisSsoUser();
+        List<Long> held = new ArrayList<>();
+
+        for (Long seatId : seatIds) {
+            String key = RedisKey.SEAT_HOLD + eventId + "_" + seatId;
+            if (!redis.hasKey(key)) continue;
+
+            Set<String> first = redis.opsForZSet().range(key, 0, 0);
+            if (first != null && !first.isEmpty()) {
+                held.add(seatId);
+            }
+        }
+        return held;
+    }
+
+    public boolean holdSeatsZSet(Long eventId, List<Long> seatIds) {
+        var redis = redisService.getRedisSsoUser();
+        var zset = redis.opsForZSet();
+        List<Long> failedSeats = new ArrayList<>();
+
+        for (Long seatId : seatIds) {
+            String key = RedisKey.SEAT_HOLD + eventId + "_" + seatId;
+            long now = System.currentTimeMillis();
+
+            //check if already hold
+            Long existingCount = zset.zCard(key);
+
+            if (existingCount != null && existingCount > 0) {
+                failedSeats.add(seatId);
+                continue;
+            }
+            //add to Redis ZSet
+            zset.add(key, "seat_" + seatId, now);
+            redis.expire(key, SEAT_HOLD_TTL_MINUTES, TimeUnit.MINUTES);
+        }
+
+        if (!failedSeats.isEmpty()) {
+            logger.warn("holdSeatsZSet|Failed for seats {}", failedSeats);
+            return false;
+        }
+
+        logger.info("holdSeatsZSet|Successfully held {} seats for {} minutes",
+                seatIds.size(), SEAT_HOLD_TTL_MINUTES);
+        return true;
+    }
+
+
+    public void releaseSeats(Long eventId, List<Long> seatIds) {
+        var zSetOps = redisService.getRedisSsoUser().opsForZSet();
+        for (Long seatId : seatIds) {
+            String key = RedisKey.SEAT_HOLD + eventId + "_" + seatId;
+            zSetOps.remove(key, "lock");
+
+            //delete if no other holder
+            Long size = zSetOps.zCard(key);
+            if (size == null || size == 0) {
+                redisService.getRedisSsoUser().delete(key);
+            }
+        }
+        logger.info("releaseSeats|Released seats: {}", seatIds);
     }
 
 }

@@ -1,14 +1,14 @@
 package com.vticket.vticket.controller;
 
+import com.vticket.vticket.config.Config;
 import com.vticket.vticket.domain.mysql.entity.Category;
 import com.vticket.vticket.domain.mysql.entity.Event;
 import com.vticket.vticket.domain.mysql.entity.Seat;
 import com.vticket.vticket.dto.response.SeatStatusMessage;
 import com.vticket.vticket.exception.ErrorCode;
-import com.vticket.vticket.service.CategoryService;
-import com.vticket.vticket.service.EventService;
-import com.vticket.vticket.service.SeatService;
+import com.vticket.vticket.service.*;
 import com.vticket.vticket.utils.ResponseJson;
+import jakarta.servlet.http.HttpServletRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +35,9 @@ public class EventController {
     @Autowired
     private SimpMessagingTemplate messagingTemplate;
 
+    @Autowired
+    private UserService userService;
+
     @GetMapping("/categories")
     public String getCategories() {
         List<Category> categories = categoryService.getAllCategories();
@@ -54,7 +57,7 @@ public class EventController {
         try {
             List<Event> events = eventService.getAllEvents();
             if (events != null) {
-                logger.info("getEvents|Success|Total events: {}|Time taken: {} ms" ,events.size() , (System.currentTimeMillis() - start));
+                logger.info("getEvents|Success|Total events: {}|Time taken: {} ms", events.size(), (System.currentTimeMillis() - start));
                 return ResponseJson.success("danh sach events", events);
             } else {
                 logger.info("No events retrieved.");
@@ -62,7 +65,7 @@ public class EventController {
             }
 
         } catch (Exception ex) {
-            logger.error("getEvents|Exception|{}" , ex.getMessage(), ex);
+            logger.error("getEvents|Exception|{}", ex.getMessage(), ex);
             return ResponseJson.of(ErrorCode.ERROR_CODE_EXCEPTION, "An error occurred while fetching events");
         }
     }
@@ -73,14 +76,14 @@ public class EventController {
         try {
             Event event = eventService.getEventById(eventId);
             if (event != null) {
-                logger.info("getEventDetail|Success|Event ID: {}|Time taken: {} ms" , eventId , (System.currentTimeMillis() - start));
+                logger.info("getEventDetail|Success|Event ID: {}|Time taken: {} ms", eventId, (System.currentTimeMillis() - start));
                 return ResponseJson.success("Detail event", event);
             } else {
-                logger.info("No event found with ID:{} |Time taken: {}ms" , eventId, (System.currentTimeMillis() - start));
+                logger.info("No event found with ID:{} |Time taken: {}ms", eventId, (System.currentTimeMillis() - start));
                 return ResponseJson.of(ErrorCode.ERROR_CODE_EXCEPTION, "No event found with the given ID");
             }
         } catch (Exception ex) {
-            logger.error("getEventDetail|Exception|{}" , ex.getMessage(), ex);
+            logger.error("getEventDetail|Exception|{}", ex.getMessage(), ex);
             return ResponseJson.of(ErrorCode.ERROR_CODE_EXCEPTION, "An error occurred while fetching event details");
         }
     }
@@ -88,7 +91,7 @@ public class EventController {
     @GetMapping("/search")
     public String getEventsByCategoryId(@RequestParam("cateId") String categoryId) {
         long start = System.currentTimeMillis();
-        try{
+        try {
             //hanlde multi id
             List<Long> categoryIds = Arrays.stream(categoryId.split(","))
                     .map(String::trim)
@@ -97,14 +100,14 @@ public class EventController {
 
             List<Event> events = eventService.getEventsByCategoryId(categoryIds);
             if (events != null) {
-                logger.info("searchEvents|Success|Category ID: {}|Total events: {}|Time taken: {} ms" , categoryId, events.size(), (System.currentTimeMillis() - start));
+                logger.info("searchEvents|Success|Category ID: {}|Total events: {}|Time taken: {} ms", categoryId, events.size(), (System.currentTimeMillis() - start));
                 return ResponseJson.success("Search events by category", events);
             } else {
-                logger.info("No events found for Category ID:{} |Time taken: {}ms" , categoryId, (System.currentTimeMillis() - start));
+                logger.info("No events found for Category ID:{} |Time taken: {}ms", categoryId, (System.currentTimeMillis() - start));
                 return ResponseJson.of(ErrorCode.ERROR_CODE_EXCEPTION, "No events found for the given category");
             }
         } catch (Exception ex) {
-            logger.error("searchEvents|Exception|{}" , ex.getMessage(), ex);
+            logger.error("searchEvents|Exception|{}", ex.getMessage(), ex);
             return ResponseJson.of(ErrorCode.ERROR_CODE_EXCEPTION, "An error occurred while searching for events");
         }
     }
@@ -114,33 +117,34 @@ public class EventController {
         long start = System.currentTimeMillis();
         try {
             List<Seat> listSeat = seatService.getListSeat(eventId);
-            if(listSeat!= null){
+            if (listSeat != null) {
                 logger.info("List Seat size: " + listSeat.size() + ", Time taken: " + (System.currentTimeMillis() - start) + "ms");
                 return ResponseJson.success("List Seat", listSeat);
             } else {
                 logger.info("No seats retrieved.");
                 return ResponseJson.of(ErrorCode.ERROR_CODE_EXCEPTION, "No seats found");
             }
-        }catch (Exception ex) {
-            logger.error("getListSeats|Exception|{}" , ex.getMessage(), ex);
+        } catch (Exception ex) {
+            logger.error("getListSeats|Exception|{}", ex.getMessage(), ex);
             return ResponseJson.of(ErrorCode.ERROR_CODE_EXCEPTION, "An error occurred while fetching seats");
         }
     }
 
     @GetMapping("/{eventId}/seat/{seatId}/check")
-    public String checkSeatHold(
-            @PathVariable Long eventId,
-            @PathVariable String seatId) {
+    public String checkSeatHold(@PathVariable Long eventId, @PathVariable String seatId) {
         try {
             List<Long> seatIds = Arrays.stream(seatId.split(","))
                     .map(String::trim)
                     .map(Long::parseLong)
                     .toList();
-            List<Seat> isHeld = seatService.checkHoldSeat(seatIds);
-            if (isHeld != null && !isHeld.isEmpty()) {
-                return ResponseJson.of(ErrorCode.SEAT_UNAVAILABLE, "Seat is currently held by another user");
+
+            List<Long> heldSeats = seatService.getHoldSeats(eventId, seatIds);
+
+            if (!heldSeats.isEmpty()) {
+                return ResponseJson.of(ErrorCode.SEAT_UNAVAILABLE,
+                        "Some seats are currently held by another user", heldSeats);
             }
-            return ResponseJson.success("Seat is available");
+            return ResponseJson.success("All seats available");
         } catch (Exception ex) {
             logger.error("checkSeatHold|Exception|" + ex.getMessage(), ex);
             return ResponseJson.of(ErrorCode.ERROR_CODE_EXCEPTION, "Error checking seat hold");
@@ -148,21 +152,35 @@ public class EventController {
     }
 
     @PostMapping("/{eventId}/seat/{seatId}/hold")
-    public String holdSeat(
-            @PathVariable Long eventId,
-            @PathVariable Long seatId) {
+    public String holdSeat(@PathVariable Long eventId,
+                           @PathVariable String seatId) {
+        try {
+            List<Long> seatIds = Arrays.stream(seatId.split(","))
+                    .map(String::trim)
+                    .map(Long::parseLong)
+                    .toList();
 
-        boolean success = seatService.holdSeat(eventId, seatId);
-        if (success) {
-            // Gửi message realtime đến tất cả client khác
-            messagingTemplate.convertAndSend(
-                    "/topic/seat/" + eventId,
-                    new SeatStatusMessage(seatId, eventId, "HOLD")
-            );
-            return ResponseJson.success("Seat held successfully");
-        } else {
-            return ResponseJson.of(400, "Seat is already held or sold");
+            boolean success = seatService.holdSeatsZSet(eventId, seatIds);
+
+            if (success) {
+                for (Long seat_id : seatIds) {
+                    //send to broker client subscribe
+                    messagingTemplate.convertAndSend(
+                            "/topic/seat/" + eventId,
+                            new SeatStatusMessage(seat_id, eventId, "HOLD")
+                    );
+                }
+                return ResponseJson.success("Seats held successfully");
+            } else {
+                return ResponseJson.of(ErrorCode.SEAT_UNAVAILABLE,
+                        "Some seats already held by another user");
+            }
+
+        } catch (Exception ex) {
+            logger.error("holdSeat|Exception|" + ex.getMessage(), ex);
+            return ResponseJson.of(ErrorCode.ERROR_CODE_EXCEPTION, "Error while holding seats");
         }
     }
+
 
 }
