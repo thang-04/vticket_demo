@@ -1,6 +1,5 @@
 package com.vticket.vticket.controller;
 
-
 import com.vticket.vticket.config.Config;
 import com.vticket.vticket.domain.mongodb.entity.User;
 import com.vticket.vticket.dto.request.UserCreationRequest;

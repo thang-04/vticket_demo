@@ -1,6 +1,5 @@
 package com.vticket.vticket.controller;
 
-import com.vticket.vticket.config.Config;
 import com.vticket.vticket.domain.mysql.entity.Category;
 import com.vticket.vticket.domain.mysql.entity.Event;
 import com.vticket.vticket.domain.mysql.entity.Seat;
@@ -8,7 +7,6 @@ import com.vticket.vticket.dto.response.SeatStatusMessage;
 import com.vticket.vticket.exception.ErrorCode;
 import com.vticket.vticket.service.*;
 import com.vticket.vticket.utils.ResponseJson;
-import jakarta.servlet.http.HttpServletRequest;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
