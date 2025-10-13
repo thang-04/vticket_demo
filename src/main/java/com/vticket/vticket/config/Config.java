@@ -29,16 +29,11 @@ public class Config {
         public static final String OPENAPP = "userIdApp";
     }
 
-    public static final class LOGIN_TYPE_PC {
-
-        public static final String FACEBOOK = "4";
-        public static final String GOOGLE = "8";
-        public static final String APPLE = "10";
-        public static final String PHONE = "phone";
-        public static final String EMAIL = "email";
-        public static final String USERNAME = "user";
-        public static final String USERID = "userId";
-        public static final String PARTNERID = "partnerId";
+    public static final class PAYMENT_TYPE {
+        public static final String VNPAY = "vnpay";
+        public static final String MOMO = "momo";
+        public static final String ZALOPAY = "zalopay";
+        public static final String CASH = "cash";
     }
 
     public static final class RABBITMQ {

@@ -23,9 +23,7 @@ public class SeatRepo {
     @Autowired
     private NamedParameterJdbcTemplate jdbcTemplate;
 
-    /**
-     * Lấy toàn bộ ghế theo eventId
-     */
+
     public List<Seat> getAllSeatByEvent(Long eventId) {
         String logPrefix = "getAllSeatByEvent|eventId=" + eventId;
 
@@ -53,9 +51,7 @@ public class SeatRepo {
         }
     }
 
-    /**
-     * Lấy chi tiết ghế theo seatId
-     */
+
     public Seat getSeatById(Long seatId) {
         String logPrefix = "getSeatById|seatId=" + seatId;
 
@@ -83,9 +79,6 @@ public class SeatRepo {
         }
     }
 
-    /**
-     * Cập nhật trạng thái ghế (AVAILABLE / HOLD / SOLD)
-     */
     public boolean updateSeatStatus(Long seatId, Seat.SeatStatus status) {
         String logPrefix = "updateSeatStatus|seatId=" + seatId + "|status=" + status;
         try {
@@ -123,9 +116,6 @@ public class SeatRepo {
     }
 
 
-    /**
-     * RowMapper ánh xạ dữ liệu từ DB → Entity Seat
-     */
     private RowMapper<Seat> seatRowMapper() {
         return (ResultSet rs, int rowNum) -> {
             Seat seat = new Seat();

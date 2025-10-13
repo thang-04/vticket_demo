@@ -1,30 +1,38 @@
 package com.vticket.vticket.service;
 
-import com.google.gson.reflect.TypeToken;
 import com.vticket.vticket.config.redis.RedisKey;
-import com.vticket.vticket.domain.mysql.entity.Event;
+import com.vticket.vticket.domain.mysql.entity.Booking;
 import com.vticket.vticket.domain.mysql.entity.Seat;
+import com.vticket.vticket.domain.mysql.entity.TicketType;
+import com.vticket.vticket.domain.mysql.repo.BookingRepo;
 import com.vticket.vticket.domain.mysql.repo.SeatRepo;
-import io.micrometer.common.util.StringUtils;
-import jakarta.transaction.Transactional;
+import com.vticket.vticket.dto.request.ListItem;
+import com.vticket.vticket.dto.request.SubmitTicketRequest;
+import com.vticket.vticket.dto.response.SeatResponse;
+import com.vticket.vticket.dto.response.SubmitTicketResponse;
+
+import com.vticket.vticket.dto.response.TicketItemResponse;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Set;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
-import static com.vticket.vticket.utils.CommonUtils.gson;
 
 @Service
 public class SeatService {
     private static final Logger logger = LogManager.getLogger(SeatService.class);
 
     private static final long SEAT_HOLD_TTL_MINUTES = 3;
+
+    private static final long BOOKING_TIME_MINUTES = 5;
+
 
     @Autowired
     private JwtService jwtService;
@@ -34,6 +42,10 @@ public class SeatService {
 
     @Autowired
     private SeatRepo seatRepo;
+
+    @Autowired
+    private BookingRepo bookingRepo;
+
 
     public List<Seat> getListSeat(Long eventId) {
         long start = System.currentTimeMillis();
@@ -127,4 +139,105 @@ public class SeatService {
         logger.info("releaseSeats|Released seats: {}", seatIds);
     }
 
+    public SubmitTicketResponse submitTicket(SubmitTicketRequest request, String paymentCode) {
+        long start = System.currentTimeMillis();
+        String bookingCode = UUID.randomUUID().toString();
+
+        try {
+            Double totalAmount = 0.0;
+            List<Seat> seats = seatRepo.getSeatsByIds(request.getListItem().stream()
+                    .map(ListItem::getSeatId)
+                    .collect(Collectors.toList()));
+
+            if (CollectionUtils.isEmpty(seats) || seats.size() != request.getListItem().size()) {
+                logger.warn("submitTicket|Some seats not found in DB");
+                return null;
+            }
+            for (Seat seat : seats) {
+                totalAmount += seat.getPrice();
+            }
+            List<TicketItemResponse> ticketItems = new ArrayList<>();
+
+            Map<Long, List<Seat>> groupedSeats = seats.stream()
+                    .collect(Collectors.groupingBy(s -> s.getTicketType().getId()));
+
+            for (Map.Entry<Long, List<Seat>> entry : groupedSeats.entrySet()) {
+                TicketType type = entry.getValue().getFirst().getTicketType();
+                List<Seat> seatList = entry.getValue();
+
+                TicketItemResponse item = new TicketItemResponse();
+                item.setId(type.getId());
+                item.setEvent_id(type.getEventId());
+                item.setTicket_name(type.getName());
+                item.setColor(type.getColor());
+                item.setIs_free(type.getIs_free());
+                item.setPrice(type.getPrice());
+                item.setOriginal_price(type.getOriginal_price());
+                item.setIs_discount(type.getIs_discount());
+                item.setDiscount_percent(type.getDiscount_percent());
+                item.setQuantity(seatList.size());
+
+                List<SeatResponse> seatResponses = seatList.stream().map(seat -> {
+                    SeatResponse s = new SeatResponse();
+                    s.setId(seat.getId());
+                    s.setTicket_type_id(type.getId());
+                    s.setSeat_name(seat.getSeat_name());
+                    s.setSeat_number(seat.getSeat_number());
+                    s.setRow_name(seat.getRow_name());
+                    s.setColumn_number(seat.getColumn_number());
+                    return s;
+                }).collect(Collectors.toList());
+
+                item.setSeats(seatResponses);
+                ticketItems.add(item);
+            }
+
+//            if (StringUtils.isNotEmpty(request.getDiscountCode())) {
+//                BigDecimal discount = totalAmount.multiply(BigDecimal.valueOf(0.1));
+//                totalAmount = totalAmount.subtract(discount);
+//            }
+
+            SubmitTicketResponse response = new SubmitTicketResponse();
+            response.setBookingCode(bookingCode);
+            response.setEventId(request.getEventId());
+            response.setListItem(ticketItems);
+            response.setDiscountCode("");
+            response.setPaymentCode(paymentCode);
+            response.setSubtotal(totalAmount);
+            response.setTotalAmount(totalAmount);
+            response.setExpiredAt(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(BOOKING_TIME_MINUTES));
+
+
+            //insert booking to DB
+            Booking booking = new Booking();
+            booking.setBookingCode(bookingCode);
+
+            booking.setEventId(request.getEventId());
+            booking.setSeatIds(
+                    request.getListItem().stream()
+                            .map(item -> String.valueOf(item.getSeatId()))
+                            .collect(Collectors.joining(","))
+            );
+            booking.setSubtotal(totalAmount);
+            booking.setTotalAmount(totalAmount);
+            booking.setPaymentMethod(Booking.PaymentMethod.MOMO);//default MOMO
+            booking.setStatus(Booking.BookingStatus.PENDING);
+            booking.setExpiredAt(LocalDateTime.now().plusMinutes(BOOKING_TIME_MINUTES));
+
+            Long bookingId = bookingRepo.createBooking(booking); // return ID insert
+            logger.info("submitTicket|Inserted booking with ID: {} for booking code: {}", bookingId, bookingCode);
+
+            response.setBookingId(bookingId);
+
+            logger.info("submitTicket|Success|Booking code: {}|Time: {} ms",
+                    bookingCode, (System.currentTimeMillis() - start));
+
+            return response;
+
+        } catch (Exception ex) {
+            logger.error("submitTicket|Exception|{}", ex.getMessage(), ex);
+        }
+        return null;
+
+    }
 }

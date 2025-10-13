@@ -5,7 +5,7 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.math.BigDecimal;
+
 import java.time.LocalDateTime;
 
 @Getter
@@ -24,7 +24,7 @@ public class Booking {
     @Column(name = "booking_code", unique = true, nullable = false, length = 50)
     private String bookingCode;
     
-    @Column(name = "user_id", nullable = false)
+    @Column(name = "user_id" )
     private Long userId;
     
     @Column(name = "event_id", nullable = false)
@@ -33,14 +33,14 @@ public class Booking {
     @Column(name = "seat_ids", nullable = false, columnDefinition = "TEXT")
     private String seatIds; // "1,2,3" - comma separated seat IDs
     
-    @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
-    private BigDecimal totalAmount;
+    @Column(name = "total_amount", nullable = false)
+    private Double totalAmount;
     
-    @Column(name = "subtotal", nullable = false, precision = 10, scale = 2)
-    private BigDecimal subtotal;
+    @Column(name = "subtotal", nullable = false)
+    private Double subtotal;
     
-    @Column(name = "discount_amount", precision = 10, scale = 2)
-    private BigDecimal discountAmount;
+    @Column(name = "discount_amount")
+    private Double discountAmount;
     
     @Column(name = "discount_code", length = 50)
     private String discountCode;
@@ -66,7 +66,7 @@ public class Booking {
     private String paymentCode;
     
     @CreationTimestamp
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
     
     @UpdateTimestamp

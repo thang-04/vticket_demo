@@ -13,6 +13,4 @@ public class SubmitTicketRequest {
     private Long eventId;
     private List<ListItem> listItem;
     private Long timestamp;
-    private String discountCode;
-    private String paymentMethod;
 }

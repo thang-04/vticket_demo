@@ -8,8 +8,8 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/payment")
-public class PaymentController {
-    private static final Logger logger = LogManager.getLogger(PaymentController.class);
+public class MomoController {
+    private static final Logger logger = LogManager.getLogger(MomoController.class);
 
     @Autowired
     private SeatService seatService;

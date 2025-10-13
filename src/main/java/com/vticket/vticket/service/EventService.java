@@ -2,8 +2,12 @@ package com.vticket.vticket.service;
 
 import com.google.gson.reflect.TypeToken;
 import com.vticket.vticket.config.redis.RedisKey;
+import com.vticket.vticket.domain.mysql.entity.Booking;
 import com.vticket.vticket.domain.mysql.entity.Event;
+import com.vticket.vticket.domain.mysql.repo.BookingRepo;
 import com.vticket.vticket.domain.mysql.repo.EventRepo;
+import com.vticket.vticket.dto.request.SubmitTicketRequest;
+import com.vticket.vticket.dto.response.SubmitTicketResponse;
 import io.micrometer.common.util.StringUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,9 +15,13 @@ import org.springframework.stereotype.Service;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import static com.vticket.vticket.utils.CommonUtils.gson;
 
@@ -72,7 +80,7 @@ public class EventService {
                 logger.info("getAllEvents in MySQL|Time taken: {} ms", (System.currentTimeMillis() - start));
                 return listEvents;
             } else {
-                listEvents = (List<Event>) gson.fromJson(resultRedis, new TypeToken<List<Event>>() {
+                listEvents = gson.fromJson(resultRedis, new TypeToken<List<Event>>() {
                 }.getType());
                 logger.info("getAllEvents in Redis|Time taken: {} ms", (System.currentTimeMillis() - start));
                 return listEvents;
@@ -113,7 +121,7 @@ public class EventService {
                 return event;
             }
         } catch (Exception ex) {
-            logger.error("getEventById|Exception|{}" , ex.getMessage(), ex);
+            logger.error("getEventById|Exception|{}", ex.getMessage(), ex);
         }
         return null;
     }
@@ -133,8 +141,8 @@ public class EventService {
             if (StringUtils.isEmpty(resultRedis)) {
                 // get list by SQL
                 List<Event> list = new ArrayList<>();
-                for(Long cateId : categoryId) {
-                     list = eventRepo.getEventsByCategory(cateId);
+                for (Long cateId : categoryId) {
+                    list = eventRepo.getEventsByCategory(cateId);
                 }
                 logger.info("Fetched events from MySQL for category {}: {} events found.", categoryId, list.size());
 
@@ -165,7 +173,7 @@ public class EventService {
                     logger.info("Stored events for category {} in Redis cache.", categoryId);
                 }
             } else {
-                listEvents = (List<Event>) gson.fromJson(resultRedis, new TypeToken<List<Event>>() {
+                listEvents = gson.fromJson(resultRedis, new TypeToken<List<Event>>() {
                 }.getType());
                 logger.info("Fetched events from Redis cache for category {}: {} events found.", categoryId, listEvents.size());
             }
@@ -173,7 +181,7 @@ public class EventService {
             logger.info("getEventsByCategory|Time taken: {} ms", (System.currentTimeMillis() - start));
             return listEvents;
         } catch (Exception ex) {
-            logger.error("getEventsByCategory|Exception|{}" , ex.getMessage(), ex);
+            logger.error("getEventsByCategory|Exception|{}", ex.getMessage(), ex);
         }
         return new ArrayList<>();
     }

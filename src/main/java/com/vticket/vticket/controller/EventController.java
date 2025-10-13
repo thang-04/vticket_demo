@@ -1,9 +1,12 @@
 package com.vticket.vticket.controller;
 
+import com.vticket.vticket.config.Config;
 import com.vticket.vticket.domain.mysql.entity.Category;
 import com.vticket.vticket.domain.mysql.entity.Event;
 import com.vticket.vticket.domain.mysql.entity.Seat;
+import com.vticket.vticket.dto.request.SubmitTicketRequest;
 import com.vticket.vticket.dto.response.SeatStatusMessage;
+import com.vticket.vticket.dto.response.SubmitTicketResponse;
 import com.vticket.vticket.exception.ErrorCode;
 import com.vticket.vticket.service.*;
 import com.vticket.vticket.utils.ResponseJson;
@@ -180,5 +183,20 @@ public class EventController {
         }
     }
 
+    @PostMapping("/booking/submit-ticket")
+    public String submitTicket(@RequestBody SubmitTicketRequest request) {
+        logger.info("Received ticket submission request: " + request);
+        try {
+            SubmitTicketResponse response = seatService.submitTicket(request, Config.PAYMENT_TYPE.MOMO);
+            logger.info("Received ticket submission response: " + response);
+            if (response == null) {
+                return ResponseJson.of(ErrorCode.ERROR_CODE_EXCEPTION, "Ticket submission failed");
+            }
+            return ResponseJson.success("Ticket submitted successfully", response);
+        } catch (Exception ex) {
+            logger.error("submitTicket|Exception|" + ex.getMessage(), ex);
+            return ResponseJson.of(ErrorCode.ERROR_CODE_EXCEPTION, "Error while submitting ticket");
+        }
+    }
 
 }

@@ -15,10 +15,5 @@ public class ListItem {
     private String rowName;
     private Integer seatNumber;
     private Integer columnNumber;
-    private BigDecimal price;
     private Long ticketTypeId;
-    private String ticketTypeName;
-    private String ticketTypeColor;
-    private Integer quantity;
-    private BigDecimal itemTotal;
 }
