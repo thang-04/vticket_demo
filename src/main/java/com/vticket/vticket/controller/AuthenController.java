@@ -48,6 +48,19 @@ public class AuthenController {
         }
     }
 
+    @PostMapping("/login-device")
+    public String loginDevice(@RequestBody AuthenticationDeviceRequest authenticationRequest) {
+        logger.info("Login attempt for device: {}", authenticationRequest.getDeviceId());
+        try {
+            var result = loginService.authenticationDevice(authenticationRequest);
+            logger.info("Login successful for device: {}", authenticationRequest.getDeviceId());
+            return ResponseJson.success("Login successful", result);
+        } catch (Exception e) {
+            logger.error("Login failed for device: {} - {}", authenticationRequest.getDeviceId(), e.getMessage(), e);
+            return ResponseJson.of(ErrorCode.UNAUTHENTICATED, e.getMessage());
+        }
+    }
+
 //    @PostMapping("/logout")
 //    public String logout(@RequestBody AuthenticationRequest request) {
 //        try {
@@ -85,12 +98,11 @@ public class AuthenController {
         }
     }
 
-
-    @PostMapping("/introspect")
-    public String verifyToken(@RequestBody IntrospectRequest intro) throws ParseException {
-        IntrospectResponse result = jwtService.introspect(intro);
-        return ResponseJson.success("Token introspection successful", result);
-    }
+//    @PostMapping("/introspect")
+//    public String verifyToken(@RequestBody IntrospectRequest intro) throws ParseException {
+//        IntrospectResponse result = jwtService.introspect(intro);
+//        return ResponseJson.success("Token introspection successful", result);
+//    }
 
     @PostMapping("/refresh")
     public String refresh(@RequestBody RefreshRequest refreshRequest) {
@@ -101,7 +113,7 @@ public class AuthenController {
                 return ResponseJson.of(ErrorCode.UNAUTHENTICATED, "Invalid refresh token");
             } else {
                 // kiem tra xem access_token da het han hay chua
-                User userVerifyAccessToken = jwtService.verifyAcessToken(user.getAccess_token());
+                User userVerifyAccessToken = jwtService.verifyAccessToken(user.getAccess_token());
 
                 if ((userVerifyAccessToken != null && userVerifyAccessToken.getId().equals(String.valueOf(Config.CODE.ERROR_CODE_103)))) {
                     logger.info("Access token expired for userId: {}. Refreshing token.", user.getId());

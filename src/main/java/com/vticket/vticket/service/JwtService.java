@@ -85,7 +85,15 @@ public class JwtService {
             if (StringUtils.isNotEmpty(user.getAccess_token())) {
                 access_token += user.getAccess_token();
             }
-            String id = "" + user.getId();
+            String email = "";
+            if (StringUtils.isNotEmpty(user.getEmail())) {
+                email += user.getEmail();
+            }
+            String device_id = "";
+            if (StringUtils.isNotEmpty(user.getDevice_id())) {
+                device_id += user.getDevice_id();
+            }
+            String id = user.getId();
             String uuid = UUID.randomUUID().toString();
             long created = System.currentTimeMillis();
 
@@ -95,6 +103,8 @@ public class JwtService {
                     .setIssuer("Viettel")
                     .claim("uuid", uuid)
                     .claim("access_token", access_token)
+                    .claim("email", email)
+                    .claim("device_id", device_id)
                     .claim("created", created)
                     .signWith(signatureAlgorithm, signingKey);
 
@@ -108,7 +118,40 @@ public class JwtService {
         }
     }
 
-    public User verifyAcessToken(String jwt) {
+    public String generateGuestToken(String device_id, Date expireDate) {
+        logger.debug("Generating guest JWT token for deviceId: {}", device_id);
+        try {
+            SignatureAlgorithm signatureAlgorithm = SignatureAlgorithm.HS256;
+            byte[] apiKeySecretBytes = DatatypeConverter.parseBase64Binary(SIGNER_KEY);
+            Key signingKey = new SecretKeySpec(apiKeySecretBytes, signatureAlgorithm.getJcaName());
+
+            String id = UUID.randomUUID().toString();
+            String uuid = UUID.randomUUID().toString();
+            long created = System.currentTimeMillis();
+
+            JwtBuilder builder = Jwts.builder().setId(id)
+                    .setIssuedAt(new Date())
+                    .setSubject("guest")
+                    .setIssuer("Viettel")
+                    .claim("uuid", uuid)
+                    .claim("access_token", "")
+                    .claim("email", "")
+                    .claim("device_id", device_id)
+                    .claim("created", created)
+                    .signWith(signatureAlgorithm, signingKey);
+
+            builder.setExpiration(expireDate);
+            String token = builder.compact();
+
+            logger.info("Successfully generated guest JWT token for deviceId: {}", device_id);
+            return token;
+        } catch (Exception ex) {
+            logger.error("Error generating guest token: {}", ex.getMessage(), ex);
+            return "";
+        }
+    }
+
+    public User verifyAccessToken(String jwt) {
         logger.debug("Verifying access token");
         User user = new User();
         try {
@@ -184,6 +227,22 @@ public class JwtService {
         return user;
     }
 
+    public String getDeviceId(String token) {
+        try {
+            if (StringUtils.isEmpty(token)) {
+                logger.warn("Empty token provided");
+                return null;
+            }
+            Claims claims = Jwts.parser()
+                    .setSigningKey(DatatypeConverter.parseBase64Binary(SIGNER_KEY))
+                    .parseClaimsJws(token).getBody();
+            return claims.get("device_id", String.class);
+        } catch (Exception ex) {
+            logger.error("Error extracting device_id from token: {}", ex.getMessage(), ex);
+            return null;
+        }
+    }
+
     private boolean isValidJwtFormat(String jwt) {
         if (StringUtils.isEmpty(jwt)) {
             return false;
@@ -202,29 +261,28 @@ public class JwtService {
         }
     }
 
-    public IntrospectResponse introspect(IntrospectRequest request) {
-        String token = request.getToken();
-        boolean isValid = true;
-
-        try {
-            Claims claims = Jwts.parser()
-                    .setSigningKey(DatatypeConverter.parseBase64Binary(SIGNER_KEY))
-                    .parseClaimsJws(token)
-                    .getBody();
-
-
-        } catch (ExpiredJwtException e) {
-            isValid = false;
-            logger.error("Token expired: {}", e.getMessage());
-        } catch (JwtException e) {
-            isValid = false;
-            logger.error("Token invalid: {}", e.getMessage());
-        }
-
-        return IntrospectResponse.builder()
-                .valid(isValid)
-                .build();
-    }
+//    public IntrospectResponse introspect(IntrospectRequest request) {
+//        String token = request.getToken();
+//        boolean isValid = true;
+//
+//        try {
+//            Claims claims = Jwts.parser()
+//                    .setSigningKey(DatatypeConverter.parseBase64Binary(SIGNER_KEY))
+//                    .parseClaimsJws(token)
+//                    .getBody();
+//
+//        } catch (ExpiredJwtException e) {
+//            isValid = false;
+//            logger.error("Token expired: {}", e.getMessage());
+//        } catch (JwtException e) {
+//            isValid = false;
+//            logger.error("Token invalid: {}", e.getMessage());
+//        }
+//
+//        return IntrospectResponse.builder()
+//                .valid(isValid)
+//                .build();
+//    }
 
 
 }

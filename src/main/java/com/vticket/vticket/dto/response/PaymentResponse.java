@@ -13,6 +13,6 @@ import java.time.LocalDateTime;
 public class PaymentResponse {
     private Long bookingId;
     private String paymentUrl;
-    private BigDecimal totalAmount;
+    private Double totalAmount;
     private LocalDateTime expiredAt;
 }

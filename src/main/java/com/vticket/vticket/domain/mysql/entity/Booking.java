@@ -24,8 +24,8 @@ public class Booking {
     @Column(name = "booking_code", unique = true, nullable = false, length = 50)
     private String bookingCode;
     
-    @Column(name = "user_id" )
-    private Long userId;
+    @Column(name = "user_id", nullable = false)
+    private String userId;
     
     @Column(name = "event_id", nullable = false)
     private Long eventId;

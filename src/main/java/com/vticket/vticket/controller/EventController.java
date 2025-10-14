@@ -5,6 +5,8 @@ import com.vticket.vticket.domain.mysql.entity.Category;
 import com.vticket.vticket.domain.mysql.entity.Event;
 import com.vticket.vticket.domain.mysql.entity.Seat;
 import com.vticket.vticket.dto.request.SubmitTicketRequest;
+import com.vticket.vticket.dto.response.MomoCreationResponse;
+import com.vticket.vticket.dto.response.MomoPaymentResponse;
 import com.vticket.vticket.dto.response.SeatStatusMessage;
 import com.vticket.vticket.dto.response.SubmitTicketResponse;
 import com.vticket.vticket.exception.ErrorCode;
@@ -184,10 +186,16 @@ public class EventController {
     }
 
     @PostMapping("/booking/submit-ticket")
-    public String submitTicket(@RequestBody SubmitTicketRequest request) {
-        logger.info("Received ticket submission request: " + request);
+    public String submitTicket(@RequestBody SubmitTicketRequest request,
+                               @RequestHeader("Authorization") String accessToken) {
+        logger.info("Received ticket submission request: {}", request);
+        if (accessToken != null) {
+            accessToken = accessToken.replaceFirst("^Bearer\\s+", "");
+        } else {
+            return ResponseJson.of(ErrorCode.UNAUTHENTICATED, "Missing Authorization header");
+        }
         try {
-            SubmitTicketResponse response = seatService.submitTicket(request, Config.PAYMENT_TYPE.MOMO);
+            SubmitTicketResponse response = seatService.submitTicket(request, Config.PAYMENT_TYPE.MOMO,accessToken);
             logger.info("Received ticket submission response: " + response);
             if (response == null) {
                 return ResponseJson.of(ErrorCode.ERROR_CODE_EXCEPTION, "Ticket submission failed");

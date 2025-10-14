@@ -205,7 +205,7 @@ public class UserService {
         }
         User user = null;
         try {
-            user = jwtService.verifyAcessToken(token);
+            user = jwtService.verifyAccessToken(token);
             if (user != null && user.getId() != null) {
                 user = getUserById(user.getId());
                 if (user != null && !token.equals(user.getAccess_token())) {

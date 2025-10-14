@@ -41,8 +41,9 @@ public class User {
     private String access_token;
     @Field("refresh_token")
     private String refresh_token;
-//    @Field("verify_token")
-//    private String verify_token;
+    @Field("device_id")
+    private String device_id;
+
     @Field("roles")
     private Set<Role> roles = new HashSet<>();
     @Field("is_active")

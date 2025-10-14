@@ -84,6 +84,22 @@ public class BookingRepo {
         return false;
     }
 
+    public Booking getBookingByBookingCode(String bookingCode) {
+        String logPrefix = "getBookingByBookingCode|bookingCode=" + bookingCode;
+        try {
+            String sql = "SELECT * FROM bookings WHERE booking_code = :bookingCode";
+            MapSqlParameterSource params = new MapSqlParameterSource();
+            params.addValue("bookingCode", bookingCode);
+
+            return jdbcTemplate.queryForObject(sql, params, bookingRowMapper());
+        } catch (EmptyResultDataAccessException ex) {
+            logger.warn(logPrefix + "|No booking found");
+        } catch (Exception ex) {
+            logger.error(logPrefix + "|Exception|" + ex.getMessage(), ex);
+        }
+        return null;
+    }
+
     public Long createBooking(Booking booking) {
         String logPrefix = "createBooking|bookingCode=" + booking.getBookingCode();
         try {
@@ -246,7 +262,7 @@ public class BookingRepo {
                 Booking b = new Booking();
                 b.setId(rs.getLong("id"));
                 b.setBookingCode(rs.getString("booking_code"));
-                b.setUserId(rs.getLong("user_id"));
+                b.setUserId(rs.getString("user_id"));
                 b.setEventId(rs.getLong("event_id"));
                 b.setSeatIds(rs.getString("seat_ids"));
                 b.setTotalAmount(rs.getDouble("total_amount"));

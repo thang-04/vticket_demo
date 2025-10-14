@@ -28,7 +28,7 @@ import java.util.List;
 public class SecurityConfig {
 
     private final String[] PUBLIC_ENDPOINTS = {
-            "/login", "/introspect", "/refresh", "/api/users", "/verify-otp", "/resend-otp",
+            "/login","/login-device", "/introspect", "/refresh", "/api/users", "/verify-otp", "/resend-otp",
             "/event/categories", "/event/list", "/event/*", "/event/search", "/uploads/**","/event/*/seat-chart","/event/*/seat/**","/event/booking/submit-ticket"
     };
 

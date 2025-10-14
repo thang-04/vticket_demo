@@ -139,7 +139,7 @@ public class SeatService {
         logger.info("releaseSeats|Released seats: {}", seatIds);
     }
 
-    public SubmitTicketResponse submitTicket(SubmitTicketRequest request, String paymentCode) {
+    public SubmitTicketResponse submitTicket(SubmitTicketRequest request, String paymentCode, String userToken) {
         long start = System.currentTimeMillis();
         String bookingCode = UUID.randomUUID().toString();
 
@@ -157,10 +157,10 @@ public class SeatService {
                 totalAmount += seat.getPrice();
             }
             List<TicketItemResponse> ticketItems = new ArrayList<>();
-
+            //group by ticket type
             Map<Long, List<Seat>> groupedSeats = seats.stream()
                     .collect(Collectors.groupingBy(s -> s.getTicketType().getId()));
-
+            //build response
             for (Map.Entry<Long, List<Seat>> entry : groupedSeats.entrySet()) {
                 TicketType type = entry.getValue().getFirst().getTicketType();
                 List<Seat> seatList = entry.getValue();
@@ -211,13 +211,13 @@ public class SeatService {
             //insert booking to DB
             Booking booking = new Booking();
             booking.setBookingCode(bookingCode);
-
+            booking.setUserId(jwtService.getDeviceId(userToken));
             booking.setEventId(request.getEventId());
             booking.setSeatIds(
                     request.getListItem().stream()
                             .map(item -> String.valueOf(item.getSeatId()))
                             .collect(Collectors.joining(","))
-            );
+            );//join to string
             booking.setSubtotal(totalAmount);
             booking.setTotalAmount(totalAmount);
             booking.setPaymentMethod(Booking.PaymentMethod.MOMO);//default MOMO
@@ -238,6 +238,6 @@ public class SeatService {
             logger.error("submitTicket|Exception|{}", ex.getMessage(), ex);
         }
         return null;
-
     }
+
 }

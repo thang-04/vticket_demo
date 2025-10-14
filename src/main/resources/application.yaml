@@ -80,4 +80,12 @@ logging:
       static-locations:
         classpath:/static/,file:uploads/
 
+momo:
+  partnerCode: MOMO
+  endpoint: https://test-payment.momo.vn/v2/gateway/api/create
+  redirectUrl: https://localhost:8080/vticket/momo/return
+  ipnUrl: https://localhost:8080/vticket/momo/ipn-handler
+  accessKey: F8BBA842ECF85
+  secretKey: K951B6PE1waDMi640xX08PD3vg6EkVlz
+  requestType: captureWallet
 
