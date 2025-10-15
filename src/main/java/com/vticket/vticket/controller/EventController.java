@@ -1,12 +1,14 @@
 package com.vticket.vticket.controller;
 
+import com.google.gson.Gson;
 import com.vticket.vticket.config.Config;
 import com.vticket.vticket.domain.mysql.entity.Category;
 import com.vticket.vticket.domain.mysql.entity.Event;
 import com.vticket.vticket.domain.mysql.entity.Seat;
+import com.vticket.vticket.domain.mysql.repo.SeatRepo;
+import com.vticket.vticket.dto.request.ListItem;
 import com.vticket.vticket.dto.request.SubmitTicketRequest;
-import com.vticket.vticket.dto.response.MomoCreationResponse;
-import com.vticket.vticket.dto.response.MomoPaymentResponse;
+
 import com.vticket.vticket.dto.response.SeatStatusMessage;
 import com.vticket.vticket.dto.response.SubmitTicketResponse;
 import com.vticket.vticket.exception.ErrorCode;
@@ -40,6 +42,12 @@ public class EventController {
 
     @Autowired
     private UserService userService;
+
+    @Autowired
+    private SeatRepo seatRepo;
+    @Autowired
+    private Gson gson;
+
 
     @GetMapping("/categories")
     public String getCategories() {
@@ -195,10 +203,28 @@ public class EventController {
             return ResponseJson.of(ErrorCode.UNAUTHENTICATED, "Missing Authorization header");
         }
         try {
-            SubmitTicketResponse response = seatService.submitTicket(request, Config.PAYMENT_TYPE.MOMO,accessToken);
+            List<Long> seatIds = request.getListItem()
+                    .stream().map(ListItem::getSeatId)
+                    .toList();
+
+            List<Seat> listInvalidSeats = seatService.getHoldSeats(request.getEventId(), seatIds)
+                    .stream()
+                    .map(id -> {
+                        return seatRepo.getSeatById(id);
+                    }).toList();
+            //hold seat
+            boolean success = seatService.holdSeatsZSet(request.getEventId(), seatIds);
+
+            if (!success) {
+                logger.info("submitTicket|Failed to hold seats: {}", gson.toJson(listInvalidSeats));
+                return ResponseJson.of(ErrorCode.SEAT_UNAVAILABLE,
+                        "Some seats already held by another user ", listInvalidSeats);
+            }
+
+            SubmitTicketResponse response = seatService.submitTicket(request, Config.PAYMENT_TYPE.MOMO, accessToken);
             logger.info("Received ticket submission response: " + response);
             if (response == null) {
-                return ResponseJson.of(ErrorCode.ERROR_CODE_EXCEPTION, "Ticket submission failed");
+                return ResponseJson.of(ErrorCode.SEAT_UNAVAILABLE, "Ticket submission failed");
             }
             return ResponseJson.success("Ticket submitted successfully", response);
         } catch (Exception ex) {

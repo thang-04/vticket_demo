@@ -50,7 +50,7 @@ spring:
             enable: true
 
   messages:
-    basename: properties/messages
+    basename: properties/messages_vi_VN
     encoding: UTF-8
 
 

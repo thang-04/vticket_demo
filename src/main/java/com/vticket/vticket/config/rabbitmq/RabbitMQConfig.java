@@ -11,22 +11,41 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitMQConfig {
 
-    //CONFIG EMAIL QUEUE
+    //CONFIG QUEUE
     @Bean
-    public Queue emailQueue() {
+    public Queue emailLoginQueue() {
         return new Queue(Config.RABBITMQ.QUEUE_MAIL, true); // durable = true để lưu queue nếu server restart
     }
 
     @Bean
-    public DirectExchange emailExchange() {
+    public Queue emailTicketQueue() {
+        return new Queue(Config.RABBITMQ.QUEUE_MAIL_TICKET, true);
+    }
+
+    //CONFIG EXCHANGE
+    @Bean
+    public DirectExchange emailLoginExchange() {
         return new DirectExchange(Config.RABBITMQ.EXCHANGE_MAIL);
     }
 
     @Bean
-    public Binding emailBinding(Queue emailQueue, DirectExchange emailExchange) {
-        return BindingBuilder.bind(emailQueue)
-                .to(emailExchange)
+    public DirectExchange emailTicketExchange() {
+        return new DirectExchange(Config.RABBITMQ.EXCHANGE_MAIL_TICKET);
+    }
+
+    //CONFIG BINDING
+    @Bean
+    public Binding emailLoginBinding(Queue emailLoginQueue, DirectExchange emailLoginExchange) {
+        return BindingBuilder.bind(emailLoginQueue)
+                .to(emailLoginExchange)
                 .with(Config.RABBITMQ.ROUTING_MAIL);
+    }
+
+    @Bean
+    public Binding emailTicketBinding(Queue emailTicketQueue, DirectExchange emailTicketExchange) {
+        return BindingBuilder.bind(emailTicketQueue)
+                .to(emailTicketExchange)
+                .with(Config.RABBITMQ.ROUTING_MAIL_TICKET);
     }
 
     // Convert object Java sang JSON
@@ -34,24 +53,6 @@ public class RabbitMQConfig {
     public MessageConverter messageConverter() {
         return new Jackson2JsonMessageConverter();
     }
-
-    //CONFIG TICKET QUEUE
-//    @Bean
-//    public Queue ticketQueue() {
-//        return new Queue(Config.RABBITMQ.QUEUE_TICKET, true);
-//    }
-//
-//    @Bean
-//    public TopicExchange ticketExchange() {
-//        return new TopicExchange(Config.RABBITMQ.EXCHANGE_TICKET);
-//    }
-//
-//    @Bean
-//    public Binding ticketBinding(Queue ticketQueue, TopicExchange ticketExchange) {
-//        return BindingBuilder.bind(ticketQueue)
-//                .to(ticketExchange)
-//                .with(Config.RABBITMQ.ROUTING_TICKET);
-//    }
 
 }
 

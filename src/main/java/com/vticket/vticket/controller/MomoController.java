@@ -24,8 +24,9 @@ public class MomoController {
     @Autowired
     private MomoService momoService;
 
+
     @PostMapping("/{bookingCode}")
-    public String createPayment(@PathVariable String bookingCode) {
+    public String createPaymentMomo(@PathVariable String bookingCode) {
         logger.info("Creating payment for booking code: {}", bookingCode);
         MomoCreationResponse responseMomo = null;
         try {
@@ -43,6 +44,21 @@ public class MomoController {
         } catch (Exception e) {
             logger.error("Error creating payment for booking code: {}: {}", bookingCode, e.getMessage(), e);
             return ResponseJson.of(ErrorCode.valueOf(responseMomo.getResultCode()), "Error creating payment: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/{bookingCode}/success")
+    public String paymentSuccess(@PathVariable String bookingCode) {
+        logger.info("Payment success for booking code: {}", bookingCode);
+        try {
+            if (bookingService.updateBookingStatus(bookingCode)) {
+                return ResponseJson.success("Payment successful and booking status updated");
+            } else {
+                return ResponseJson.of(ErrorCode.ERROR_CODE_EXCEPTION, "Failed to update booking status");
+            }
+        } catch (Exception e) {
+            logger.error("Error processing payment success for booking code: {}: {}", bookingCode, e.getMessage(), e);
+            return ResponseJson.of(ErrorCode.ERROR_CODE_EXCEPTION, "Error processing payment success: " + e.getMessage());
         }
     }
 

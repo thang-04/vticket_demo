@@ -31,6 +31,7 @@ public class LoginService {
 
     @Autowired
     private EmailService emailService;
+
     @Autowired
     private JwtService jwtService;
 

@@ -58,10 +58,15 @@ public class Config {
     }
 
     public static final class RABBITMQ {
-        // MAIL MODULE
+        // MAIL FIRST_LOGIN MODULE
         public static final String QUEUE_MAIL = "mail.queue";
         public static final String EXCHANGE_MAIL = "mail.exchange";
         public static final String ROUTING_MAIL = "mail.routing";
+
+        //MAIL CONFIRM TICKET
+        public static final String QUEUE_MAIL_TICKET = "mail.ticket.queue";
+        public static final String EXCHANGE_MAIL_TICKET = "mail.ticket.exchange";
+        public static final String ROUTING_MAIL_TICKET = "mail.ticket.routing";
 
         // PAYMENT MODULE
         public static final String QUEUE_PAYMENT = "payment.queue";

@@ -28,11 +28,11 @@ public class ResponseJson {
 
     public static String of(ErrorCode code, String desc, Object data) {
         JsonElement jsonElement = gson.toJsonTree(data);
-        JsonObject jsonObject = jsonElement != null && jsonElement.isJsonObject() ? jsonElement.getAsJsonObject() : null;
-        return of(code, desc, jsonObject);
+//        JsonObject jsonObject = jsonElement != null && jsonElement.isJsonObject() ? jsonElement.getAsJsonObject() : null;
+        return of(code, desc, jsonElement);
     }
 
-    public static String of(ErrorCode code, String desc, JsonObject data) {
+    public static String of(ErrorCode code, String desc, JsonElement data) {
         JsonObject obj = new JsonObject();
         obj.addProperty("code", code.getCode());
         obj.addProperty("codeName", code.name());

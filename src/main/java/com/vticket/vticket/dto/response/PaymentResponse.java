@@ -1,6 +1,7 @@
 package com.vticket.vticket.dto.response;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
@@ -10,9 +11,11 @@ import java.time.LocalDateTime;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 public class PaymentResponse {
-    private Long bookingId;
-    private String paymentUrl;
+    private String bookingCode;
+    private long eventId;
     private Double totalAmount;
-    private LocalDateTime expiredAt;
+    private String userId;
+
 }

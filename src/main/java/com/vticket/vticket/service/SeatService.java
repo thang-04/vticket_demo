@@ -1,6 +1,7 @@
 package com.vticket.vticket.service;
 
 import com.vticket.vticket.config.redis.RedisKey;
+import com.vticket.vticket.domain.mongodb.entity.User;
 import com.vticket.vticket.domain.mysql.entity.Booking;
 import com.vticket.vticket.domain.mysql.entity.Seat;
 import com.vticket.vticket.domain.mysql.entity.TicketType;
@@ -12,6 +13,8 @@ import com.vticket.vticket.dto.response.SeatResponse;
 import com.vticket.vticket.dto.response.SubmitTicketResponse;
 
 import com.vticket.vticket.dto.response.TicketItemResponse;
+import com.vticket.vticket.utils.CommonUtils;
+import io.micrometer.common.util.StringUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -45,6 +48,8 @@ public class SeatService {
 
     @Autowired
     private BookingRepo bookingRepo;
+    @Autowired
+    private UserService userService;
 
 
     public List<Seat> getListSeat(Long eventId) {
@@ -101,9 +106,9 @@ public class SeatService {
             String key = RedisKey.SEAT_HOLD + eventId + "_" + seatId;
             long now = System.currentTimeMillis();
 
-            //check if already hold
-            Long existingCount = zset.zCard(key);
+            Long existingCount = zset.zCard(key);//count of holders
 
+            //check if already hold
             if (existingCount != null && existingCount > 0) {
                 failedSeats.add(seatId);
                 continue;
@@ -114,7 +119,7 @@ public class SeatService {
         }
 
         if (!failedSeats.isEmpty()) {
-            logger.warn("holdSeatsZSet|Failed for seats {}", failedSeats);
+            logger.warn("holdSeatsZSet|Failed for seatIds: {}", failedSeats.stream().map(Object::toString).collect(Collectors.joining(",")));
             return false;
         }
 
@@ -128,7 +133,7 @@ public class SeatService {
         var zSetOps = redisService.getRedisSsoUser().opsForZSet();
         for (Long seatId : seatIds) {
             String key = RedisKey.SEAT_HOLD + eventId + "_" + seatId;
-            zSetOps.remove(key, "lock");
+            zSetOps.remove(key, "seat_" + seatId);
 
             //delete if no other holder
             Long size = zSetOps.zCard(key);
@@ -153,6 +158,14 @@ public class SeatService {
                 logger.warn("submitTicket|Some seats not found in DB");
                 return null;
             }
+            //check seat available
+            for(Seat seat : seats){
+                if(!seat.getStatus().equals(Seat.SeatStatus.AVAILABLE)){
+                    logger.warn("submitTicket|Some seats not available");
+                    return null;
+                }
+            }
+
             for (Seat seat : seats) {
                 totalAmount += seat.getPrice();
             }
@@ -211,7 +224,7 @@ public class SeatService {
             //insert booking to DB
             Booking booking = new Booking();
             booking.setBookingCode(bookingCode);
-            booking.setUserId(jwtService.getDeviceId(userToken));
+            booking.setUserId(getUserIdFromToken(userToken));//userid or deviceId
             booking.setEventId(request.getEventId());
             booking.setSeatIds(
                     request.getListItem().stream()
@@ -238,6 +251,23 @@ public class SeatService {
             logger.error("submitTicket|Exception|{}", ex.getMessage(), ex);
         }
         return null;
+    }
+
+    public String getUserIdFromToken(String token) {
+        try {
+            if (!CommonUtils.isNotEmpty(token)) {
+                return null;
+            }
+            User user = userService.getUserFromAccessToken(token);
+            if (user != null) {
+                return user.getId();
+            }else{
+                return jwtService.getDeviceId(token);
+            }
+        } catch (Exception ex) {
+            logger.error("getUserIdFromToken|Exception|{}", ex.getMessage(), ex);
+            return null;
+        }
     }
 
 }

@@ -2,7 +2,10 @@ package com.vticket.vticket.service;
 
 import com.vticket.vticket.config.rabbitmq.EmailQueueProducer;
 import com.vticket.vticket.domain.mongodb.entity.User;
+import com.vticket.vticket.domain.mysql.entity.Booking;
+import com.vticket.vticket.domain.mysql.entity.Event;
 import com.vticket.vticket.dto.message.LoginEventMessage;
+import com.vticket.vticket.dto.response.PaymentResponse;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
@@ -57,8 +60,21 @@ public class EmailService {
                 .loginTime(new Date())
                 .build();
 
-        emailQueueProducer.sendEmailToQueue(payload);
+        emailQueueProducer.sendEmailLoginToQueue(payload);
         logger.info("Enqueued welcome email for user ID: {} in {} ms", newUser.getId(), (System.currentTimeMillis() - start));
+    }
+
+    public void sendTicketMail(Booking successBooking) {
+        long start = System.currentTimeMillis();
+
+        PaymentResponse payload = PaymentResponse.builder()
+                .bookingCode(successBooking.getBookingCode())
+                .totalAmount(successBooking.getTotalAmount())
+                .eventId(successBooking.getEventId())
+                .userId(successBooking.getUserId())
+                .build();
+        emailQueueProducer.sendEmailTicketToQueue(payload);
+        logger.info("Enqueued ticket email in {} ms", (System.currentTimeMillis() - start));
     }
 
 

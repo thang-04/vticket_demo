@@ -24,4 +24,9 @@ public class RedisService {
         this.getRedisSsoUser().delete(keyRedis);
         logger.info("Deleted Redis key: " + keyRedis);
     }
+
+    public void deleteRedisKey(String key) {
+        this.getRedisSsoUser().delete(key);
+        logger.info("Deleted Redis key: " + key);
+    }
 }

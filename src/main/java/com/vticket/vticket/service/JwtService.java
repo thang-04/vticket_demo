@@ -5,6 +5,7 @@ import com.vticket.vticket.domain.mongodb.entity.User;
 import com.vticket.vticket.dto.request.IntrospectRequest;
 import com.vticket.vticket.dto.response.IntrospectResponse;
 import com.vticket.vticket.exception.AppException;
+import com.vticket.vticket.utils.CommonUtils;
 import io.jsonwebtoken.*;
 import io.micrometer.common.util.StringUtils;
 import lombok.experimental.NonFinal;

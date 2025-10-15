@@ -34,11 +34,13 @@ public class SeatRepo {
                            t.name AS ticket_type_name, t.color AS ticket_type_color, t.price AS ticket_type_price
                     FROM seats s
                     LEFT JOIN ticket_types t ON s.ticket_type_id = t.id
-                    WHERE s.event_id = :eventId
+                    WHERE s.event_id = :eventId and s.status != :status
+                    ORDER BY s.row_name, s.seat_number
                     """;
 
             MapSqlParameterSource params = new MapSqlParameterSource()
-                    .addValue("eventId", eventId);
+                    .addValue("eventId", eventId)
+                    .addValue("status", Seat.SeatStatus.SOLD.ordinal());
 
             return jdbcTemplate.query(sql, params, seatRowMapper());
 
