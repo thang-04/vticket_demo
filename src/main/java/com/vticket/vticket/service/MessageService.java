@@ -12,10 +12,16 @@ public class MessageService {
 
     public MessageService(MessageSource messageSource) {
         this.messageSource = messageSource;
+        try {
+            String test = messageSource.getMessage("email.ticket.subject", null, new Locale("vi", "VN"));
+            System.out.println("✓ MessageSource loaded successfully: " + test);
+        } catch (Exception e) {
+            System.err.println("✗ MessageSource failed to load: " + e.getMessage());
+        }
     }
 
     public String get(String key, Object... args) {
-        return messageSource.getMessage(key, args, Locale.forLanguageTag("vi-VN"));
+        return messageSource.getMessage(key, args, new Locale("vi", "VN"));
     }
 }
 

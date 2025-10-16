@@ -9,6 +9,7 @@ import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -59,6 +60,10 @@ public class BookingService {
             Booking booking = bookingRepo.getBookingByBookingCode(bookingCode);
             if (booking == null) {
                 logger.info("No booking found for code {}.", bookingCode);
+                return false;
+            }
+            if(booking.getStatus() == Booking.BookingStatus.PAID||booking.getExpiredAt().isBefore(LocalDateTime.now())) {
+                logger.info("Booking code {} is already PAID or expired time!", bookingCode);
                 return false;
             }
             if (bookingRepo.updateBookingStatus(booking.getId(), Booking.BookingStatus.PAID)) {

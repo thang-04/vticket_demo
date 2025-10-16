@@ -66,14 +66,22 @@ public class EmailQueueConsumer {
                 logger.info("User not found for ID: " + payload.getUserId());
                 return;
             }
-            String subject = "Vé sự kiện của bạn từ VTicket";
-            String body = "Chào " + user.getFull_name() + ",\n\n" +
-                    "Cảm ơn bạn đã sử dụng dịch vụ của VTicket. Dưới đây là thông tin vé sự kiện của bạn:\n\n" +
-                    "Mã đặt chỗ: " + payload.getBookingCode() + "\n" +
-                    "Tổng thanh toán: " + String.format("%,.0f", payload.getTotalAmount()) + " VND\n\n" +
-                    "Vui lòng mang theo mã đặt chỗ này khi đến sự kiện.\n\n" +
-                    "Trân trọng,\n" +
-                    "Đội ngũ VTicket";
+                String subject = messageService.get("email.ticket.subject", user.getFull_name());
+            String body = messageService.get("email.ticket.body",
+                    user.getFull_name(),
+                    payload.getEventId(),
+                    payload.getBookingCode(),
+                    payload.getTotalAmount()
+            );
+//            String subject = "Vé sự kiện của bạn từ VTicket";
+//            String body = "Chào " + user.getFull_name() + ",\n\n" +
+//                    "Cảm ơn bạn đã sử dụng dịch vụ của VTicket. Dưới đây là thông tin vé sự kiện của bạn:\n\n" +
+//                    "Mã đặt chỗ: " + payload.getBookingCode() + "\n" +
+//                    "Tổng thanh toán: " + String.format("%,.0f", payload.getTotalAmount()) + " VND\n\n" +
+//                    "Vui lòng mang theo mã đặt chỗ này khi đến sự kiện.\n\n" +
+//                    "Trân trọng,\n" +
+//                    "Đội ngũ VTicket";
+
             SimpleMailMessage mail = new SimpleMailMessage();
             mail.setTo(user.getEmail());
             mail.setSubject(subject);

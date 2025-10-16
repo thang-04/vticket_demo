@@ -14,14 +14,11 @@ import com.vticket.vticket.dto.response.SubmitTicketResponse;
 
 import com.vticket.vticket.dto.response.TicketItemResponse;
 import com.vticket.vticket.utils.CommonUtils;
-import io.micrometer.common.util.StringUtils;
-import org.apache.commons.collections.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -35,7 +32,6 @@ public class SeatService {
     private static final long SEAT_HOLD_TTL_MINUTES = 3;
 
     private static final long BOOKING_TIME_MINUTES = 5;
-
 
     @Autowired
     private JwtService jwtService;
@@ -123,7 +119,7 @@ public class SeatService {
             return false;
         }
 
-        logger.info("holdSeatsZSet|Successfully held {} seats for {} minutes",
+        logger.info("holdSeatsZSet|Successfully hold with [{}] seats for {} minutes",
                 seatIds.size(), SEAT_HOLD_TTL_MINUTES);
         return true;
     }
@@ -150,17 +146,31 @@ public class SeatService {
 
         try {
             Double totalAmount = 0.0;
-            List<Seat> seats = seatRepo.getSeatsByIds(request.getListItem().stream()
-                    .map(ListItem::getSeatId)
-                    .collect(Collectors.toList()));
 
-            if (CollectionUtils.isEmpty(seats) || seats.size() != request.getListItem().size()) {
-                logger.warn("submitTicket|Some seats not found in DB");
+            //check all seat exist
+            List<Long> requestSeatIds = request.getListItem()
+                    .stream()
+                    .map(ListItem::getSeatId)
+                    .collect(Collectors.toList());
+
+            List<Seat> seats = seatRepo.getSeatsByIds(requestSeatIds);
+
+            List<Long> foundSeatIds = seats.stream()
+                    .map(Seat::getId)
+                    .toList();
+
+            List<Long> missingSeatIds = requestSeatIds.stream()
+                    .filter(id -> !foundSeatIds.contains(id))
+                    .collect(Collectors.toList());
+
+            if (!missingSeatIds.isEmpty()) {
+                logger.warn("submitTicket|Seats not found in DB: {}", missingSeatIds);
                 return null;
             }
+
             //check seat available
-            for(Seat seat : seats){
-                if(!seat.getStatus().equals(Seat.SeatStatus.AVAILABLE)){
+            for (Seat seat : seats) {
+                if (!seat.getStatus().equals(Seat.SeatStatus.AVAILABLE)) {
                     logger.warn("submitTicket|Some seats not available");
                     return null;
                 }
@@ -220,7 +230,6 @@ public class SeatService {
             response.setTotalAmount(totalAmount);
             response.setExpiredAt(System.currentTimeMillis() + TimeUnit.MINUTES.toMillis(BOOKING_TIME_MINUTES));
 
-
             //insert booking to DB
             Booking booking = new Booking();
             booking.setBookingCode(bookingCode);
@@ -261,7 +270,7 @@ public class SeatService {
             User user = userService.getUserFromAccessToken(token);
             if (user != null) {
                 return user.getId();
-            }else{
+            } else {
                 return jwtService.getDeviceId(token);
             }
         } catch (Exception ex) {

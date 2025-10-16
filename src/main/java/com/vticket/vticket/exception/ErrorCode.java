@@ -28,6 +28,8 @@ public enum ErrorCode {
     RATE_LIMIT_EXCEEDED(1019, "Rate limit exceeded", HttpStatus.TOO_MANY_REQUESTS),
     INVALID_REQUEST(1020, "Invalid request", HttpStatus.BAD_REQUEST),
     SEAT_UNAVAILABLE(2001, "Seat is unavailable", HttpStatus.BAD_REQUEST),
+    EVENT_NOT_FOUND(2002, "Event not found", HttpStatus.NOT_FOUND),
+    SEAT_NOT_FOUND(2003, "Seat not found", HttpStatus.NOT_FOUND),
     PAYMENT_FAILED(3001, "Payment failed", HttpStatus.PAYMENT_REQUIRED),
     BOOKING_NOT_FOUND(4001, "Booking not found", HttpStatus.NOT_FOUND)
     ;

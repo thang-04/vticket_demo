@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/event")
@@ -149,6 +150,21 @@ public class EventController {
                     .map(Long::parseLong)
                     .toList();
 
+            List<Seat> seats = seatRepo.getSeatsByIds(seatIds);
+
+            List<Long> foundSeatIds = seats.stream()
+                    .map(Seat::getId)
+                    .toList();
+
+            List<Long> missingSeatIds = seatIds.stream()
+                    .filter(id -> !foundSeatIds.contains(id))
+                    .collect(Collectors.toList());
+
+            if (!missingSeatIds.isEmpty()) {
+                logger.warn("submitTicket|Seats not found in DB: {}", missingSeatIds);
+                return ResponseJson.of(ErrorCode.SEAT_NOT_FOUND,
+                        "Some seats not found in the database", missingSeatIds);
+            }
             List<Long> heldSeats = seatService.getHoldSeats(eventId, seatIds);
 
             if (!heldSeats.isEmpty()) {
@@ -212,6 +228,7 @@ public class EventController {
                     .map(id -> {
                         return seatRepo.getSeatById(id);
                     }).toList();
+
             //hold seat
             boolean success = seatService.holdSeatsZSet(request.getEventId(), seatIds);
 
@@ -219,6 +236,14 @@ public class EventController {
                 logger.info("submitTicket|Failed to hold seats: {}", gson.toJson(listInvalidSeats));
                 return ResponseJson.of(ErrorCode.SEAT_UNAVAILABLE,
                         "Some seats already held by another user ", listInvalidSeats);
+            } else {
+                for (Long seat_id : seatIds) {
+                    //send to broker client subscribe
+                    messagingTemplate.convertAndSend(
+                            "/topic/seat/" + request.getEventId(),
+                            new SeatStatusMessage(seat_id, request.getEventId(), "HOLD")
+                    );
+                }
             }
 
             SubmitTicketResponse response = seatService.submitTicket(request, Config.PAYMENT_TYPE.MOMO, accessToken);

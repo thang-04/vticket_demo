@@ -14,7 +14,7 @@ public class EmailQueueProducer {
 
     public void sendEmailLoginToQueue(LoginEventMessage payload) {
         rabbitTemplate.convertAndSend(
-                Config.RABBITMQ.QUEUE_MAIL,
+                Config.RABBITMQ.EXCHANGE_MAIL,
                 Config.RABBITMQ.ROUTING_MAIL,
                 payload
         );

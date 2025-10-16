@@ -20,12 +20,4 @@ public class WebConfig implements WebMvcConfigurer {
         System.out.println("Working directory: " + System.getProperty("user.dir"));
     }
 
-    @Bean
-    public MessageSource messageSource() {
-        ReloadableResourceBundleMessageSource messageSource = new ReloadableResourceBundleMessageSource();
-        messageSource.setBasename("classpath:messages/messages");
-        messageSource.setDefaultEncoding("UTF-8");
-        messageSource.setCacheSeconds(3600);
-        return messageSource;
-    }
 }

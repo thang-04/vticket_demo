@@ -49,10 +49,10 @@ spring:
           starttls:
             enable: true
 
-  messages:
-    basename: properties/messages_vi_VN
-    encoding: UTF-8
-
+#  messages:
+#    basename: properties/messages
+#    encoding: UTF-8
+#    fallback-to-system-locale: false
 
 app:
   mail:
