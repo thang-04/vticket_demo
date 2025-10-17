@@ -98,30 +98,55 @@ public class SeatService {
         var zset = redis.opsForZSet();
         List<Long> failedSeats = new ArrayList<>();
 
-        for (Long seatId : seatIds) {
-            String key = RedisKey.SEAT_HOLD + eventId + "_" + seatId;
-            long now = System.currentTimeMillis();
+        //sort seatIds
+        List<Long> sortedSeatIds = new ArrayList<>(seatIds);
+        Collections.sort(sortedSeatIds);
 
-            Long existingCount = zset.zCard(key);//count of holders
+        String groupLockKey = "lock:event_" + eventId + "_group";
+        String groupToken = UUID.randomUUID().toString();
 
-            //check if already hold
-            if (existingCount != null && existingCount > 0) {
-                failedSeats.add(seatId);
-                continue;
+        Boolean groupLocked = redis.opsForValue().setIfAbsent(groupLockKey, groupToken, 500, TimeUnit.MILLISECONDS);
+        if (Boolean.FALSE.equals(groupLocked)) {
+            logger.warn("holdSeatsZSet|Group lock already held, skip entire request");
+            return false; //if cannot get group lock, fail entire request
+        }
+
+        try {
+            //check seat hold status
+            for (Long seatId : sortedSeatIds) {
+                String seatKey = RedisKey.SEAT_HOLD + eventId + "_" + seatId;
+                Long count = zset.zCard(seatKey);
+                if (count != null && count > 0) {
+                    failedSeats.add(seatId);
+                }
             }
-            //add to Redis ZSet
-            zset.add(key, "seat_" + seatId, now);
-            redis.expire(key, SEAT_HOLD_TTL_MINUTES, TimeUnit.MINUTES);
-        }
 
-        if (!failedSeats.isEmpty()) {
-            logger.warn("holdSeatsZSet|Failed for seatIds: {}", failedSeats.stream().map(Object::toString).collect(Collectors.joining(",")));
+            if (!failedSeats.isEmpty()) {
+                logger.warn("holdSeatsZSet|Some seats already held: {}", failedSeats);
+                return false;
+            }
+
+            for (Long seatId : sortedSeatIds) {
+                String seatKey = RedisKey.SEAT_HOLD + eventId + "_" + seatId;
+                long now = System.currentTimeMillis();
+                zset.add(seatKey, "seat_" + seatId + "_" + now, now);
+                redis.expire(seatKey, SEAT_HOLD_TTL_MINUTES, TimeUnit.MINUTES);
+                logger.info("Seat {} held successfully (event={})", seatId, eventId);
+            }
+
+            logger.info("holdSeatsZSet|All {} seats held successfully for event {}", sortedSeatIds.size(), eventId);
+            return true;
+
+        } catch (Exception e) {
+            logger.error("holdSeatsZSet|Exception: {}", e.getMessage(), e);
             return false;
-        }
 
-        logger.info("holdSeatsZSet|Successfully hold with [{}] seats for {} minutes",
-                seatIds.size(), SEAT_HOLD_TTL_MINUTES);
-        return true;
+        } finally {
+            String currentToken = redis.opsForValue().get(groupLockKey);
+            if (groupToken.equals(currentToken)) {
+                redis.delete(groupLockKey);
+            }
+        }
     }
 
 
