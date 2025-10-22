@@ -57,6 +57,15 @@ public class Config {
         public static final String CASH = "cash";
     }
 
+    public static final class KAFKA {
+        // Email Events
+        public static final String TOPIC_EMAIL_LOGIN = "email-login-events";
+        public static final String TOPIC_EMAIL_TICKET = "email-ticket-events";
+
+        // Consumer Group
+        public static final String GROUP_EMAIL_SERVICE = "vticket-email-service";
+    }
+
     public static final class RABBITMQ {
         // MAIL FIRST_LOGIN MODULE
         public static final String QUEUE_MAIL = "mail.queue";

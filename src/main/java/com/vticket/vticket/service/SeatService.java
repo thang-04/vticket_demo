@@ -51,31 +51,55 @@ public class SeatService {
     public List<Seat> getListSeat(Long eventId) {
         long start = System.currentTimeMillis();
         try {
-            List<Seat> seatList = seatRepo.getAllSeatByEvent(eventId);
-            if (seatList == null) return List.of();
-
             var redis = redisService.getRedisSsoUser();
+            String hashKey = RedisKey.SEAT_STATUS + eventId;
+            String zsetKey = RedisKey.SEAT_HOLD + eventId;
 
-            for (Seat seat : seatList) {
-                String key = RedisKey.SEAT_HOLD + eventId + "_" + seat.getId();
+            Map<Object, Object> seatStatusMap = redis.opsForHash().entries(hashKey);
 
-                if (redis.hasKey(key)) {
-                    Set<String> first = redis.opsForZSet().range(key, 0, 0);
-                    if (first != null && !first.isEmpty()) {
-                        //config status in response
-                        seat.setStatus(Seat.SeatStatus.HOLD);
-                    }
-                }
+            //get seat list from DB
+            List<Seat> seatList = seatRepo.getAllSeatByEvent(eventId);
+            if (seatList == null || seatList.isEmpty()) {
+                logger.warn("getListSeat|No seats found for eventId={}", eventId);
+                return List.of();
             }
-            logger.info("getListSeat|eventId=" + eventId + "|size=" + seatList.size()
-                    + "|time=" + (System.currentTimeMillis() - start) + "ms");
+            //cache seat status if not exist
+            if (seatStatusMap.isEmpty()) {
+
+                Map<String, String> hashData = new HashMap<>();
+                for (Seat seat : seatList) {
+                    hashData.put(seat.getId().toString(), seat.getStatus().name());
+                }
+                redis.opsForHash().putAll(hashKey, hashData);
+                redis.expire(hashKey, 1, TimeUnit.DAYS);//1 day
+
+                seatStatusMap = new HashMap<>(hashData);
+                logger.info("getListSeat|Cached seat status for eventId={}", eventId);
+            }
+
+            //get zset seat-hold list
+            Set<String> holdSeatIds = redis.opsForZSet().range(zsetKey, 0, -1);
+
+            if (holdSeatIds != null && !holdSeatIds.isEmpty()) {
+                Map<String, String> holdUpdate = new HashMap<>();
+                for (String seatId : holdSeatIds) {
+                    holdUpdate.put(seatId, Seat.SeatStatus.HOLD.name());
+                }
+                redis.opsForHash().putAll(hashKey, holdUpdate);
+            }
+
+            logger.info("getListSeat|eventId={} |fromRedis={} |holdCount={} |size={} |time={}ms",
+                    eventId, !seatStatusMap.isEmpty(),
+                    (holdSeatIds != null ? holdSeatIds.size() : 0),
+                    seatList.size(), (System.currentTimeMillis() - start));
 
             return seatList;
         } catch (Exception ex) {
-            logger.error("getListSeat|Exception|" + ex.getMessage(), ex);
+            logger.error("getListSeat|Exception|{}", ex.getMessage(), ex);
             return List.of();
         }
     }
+
 
     public List<Long> getHoldSeats(Long eventId, List<Long> seatIds) {
         var redis = redisService.getRedisSsoUser();
@@ -97,25 +121,26 @@ public class SeatService {
         var redis = redisService.getRedisSsoUser();
         var zset = redis.opsForZSet();
         List<Long> failedSeats = new ArrayList<>();
-
-        //sort seatIds
         List<Long> sortedSeatIds = new ArrayList<>(seatIds);
         Collections.sort(sortedSeatIds);
 
-        String groupLockKey = "lock:event_" + eventId + "_group";
-        String groupToken = UUID.randomUUID().toString();
+        //set order key redis
+        String orderKey = "queue:event_" + eventId + "_hold_order";
+        Long order = redis.opsForValue().increment(orderKey); // atomic +1
 
-        Boolean groupLocked = redis.opsForValue().setIfAbsent(groupLockKey, groupToken, 500, TimeUnit.MILLISECONDS);
-        if (Boolean.FALSE.equals(groupLocked)) {
-            logger.warn("holdSeatsZSet|Group lock already held, skip entire request");
-            return false; //if cannot get group lock, fail entire request
+        redis.expire(orderKey, 5, TimeUnit.SECONDS);
+
+        //only first request
+        if (order != null && order > 1) {
+            logger.warn("holdSeatsZSet|Rejected because another request came first (order={})", order);
+            return false;
         }
 
         try {
-            //check seat hold status
             for (Long seatId : sortedSeatIds) {
                 String seatKey = RedisKey.SEAT_HOLD + eventId + "_" + seatId;
                 Long count = zset.zCard(seatKey);
+                //check if seat already hold
                 if (count != null && count > 0) {
                     failedSeats.add(seatId);
                 }
@@ -126,26 +151,22 @@ public class SeatService {
                 return false;
             }
 
+            long now = System.currentTimeMillis();
             for (Long seatId : sortedSeatIds) {
                 String seatKey = RedisKey.SEAT_HOLD + eventId + "_" + seatId;
-                long now = System.currentTimeMillis();
+                //add to zset
                 zset.add(seatKey, "seat_" + seatId + "_" + now, now);
                 redis.expire(seatKey, SEAT_HOLD_TTL_MINUTES, TimeUnit.MINUTES);
                 logger.info("Seat {} held successfully (event={})", seatId, eventId);
             }
-
-            logger.info("holdSeatsZSet|All {} seats held successfully for event {}", sortedSeatIds.size(), eventId);
+            logger.info("holdSeatsZSet|All {} seats held successfully (order={})", sortedSeatIds.size(), order);
             return true;
 
         } catch (Exception e) {
             logger.error("holdSeatsZSet|Exception: {}", e.getMessage(), e);
             return false;
-
         } finally {
-            String currentToken = redis.opsForValue().get(groupLockKey);
-            if (groupToken.equals(currentToken)) {
-                redis.delete(groupLockKey);
-            }
+            redis.delete(orderKey);
         }
     }
 
@@ -275,6 +296,28 @@ public class SeatService {
             logger.info("submitTicket|Inserted booking with ID: {} for booking code: {}", bookingId, bookingCode);
 
             response.setBookingId(bookingId);
+
+            //update redis seat status
+            try {
+                var redis = redisService.getRedisSsoUser();
+                String hashKey = RedisKey.SEAT_STATUS + request.getEventId();
+                Map<String, String> updateMap = new HashMap<>();
+
+                for (Long seatId : requestSeatIds) {
+                    updateMap.put(seatId.toString(), Seat.SeatStatus.SOLD.name());
+                }
+                redis.opsForHash().putAll(hashKey, updateMap);
+
+                // remove from seat-hold zset
+                String zsetKey = RedisKey.SEAT_HOLD + request.getEventId();
+                redis.opsForZSet().remove(zsetKey, requestSeatIds.toArray());
+
+                logger.info("submitTicket|Updated Redis Hash and cleaned ZSET for eventId={}, seats={}",
+                        request.getEventId(), requestSeatIds);
+            } catch (Exception e) {
+                logger.warn("submitTicket|Redis update failed|eventId={}|error={}",
+                        request.getEventId(), e.getMessage());
+            }
 
             logger.info("submitTicket|Success|Booking code: {}|Time: {} ms",
                     bookingCode, (System.currentTimeMillis() - start));

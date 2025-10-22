@@ -12,4 +12,5 @@ public class RedisKey {
     public static final String REDIS_EVENT_BY_ID = "vt:event:%s";
     public static final String SEAT_LOCK = "vt:seat:lock:" ;
     public static final String SEAT_HOLD = "vt:seat:hold:";
+    public static final String SEAT_STATUS = "vt:seat_status:event:";
 }

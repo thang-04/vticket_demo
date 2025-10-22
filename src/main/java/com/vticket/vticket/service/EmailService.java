@@ -1,5 +1,6 @@
 package com.vticket.vticket.service;
 
+import com.vticket.vticket.config.kafka.EmailKafkaProducer;
 import com.vticket.vticket.config.rabbitmq.EmailQueueProducer;
 import com.vticket.vticket.domain.mongodb.entity.User;
 import com.vticket.vticket.domain.mysql.entity.Booking;
@@ -29,8 +30,11 @@ public class EmailService {
 
     private final MessageService messageService;
 
+    private final EmailKafkaProducer emailKafkaProducer;
 
-    public EmailService(JavaMailSender mailSender, EmailQueueProducer emailQueueProducer, MessageService messageService) {
+
+    public EmailService(JavaMailSender mailSender, EmailQueueProducer emailQueueProducer, MessageService messageService, EmailKafkaProducer emailKafkaProducer) {
+        this.emailKafkaProducer = emailKafkaProducer;
         this.mailSender = mailSender;
         this.emailQueueProducer = emailQueueProducer;
         this.messageService = messageService;
@@ -67,14 +71,19 @@ public class EmailService {
     public void sendTicketMail(Booking successBooking) {
         long start = System.currentTimeMillis();
 
+        // create payload
         PaymentResponse payload = PaymentResponse.builder()
                 .bookingCode(successBooking.getBookingCode())
                 .totalAmount(successBooking.getTotalAmount())
                 .eventId(successBooking.getEventId())
                 .userId(successBooking.getUserId())
                 .build();
-        emailQueueProducer.sendEmailTicketToQueue(payload);
-        logger.info("Enqueued ticket email in {} ms", (System.currentTimeMillis() - start));
+
+        // send message to kafka
+        emailKafkaProducer.sendEmailTicketEvent(payload);
+        logger.info("Enqueued ticket email via Kafka in {} ms",
+                (System.currentTimeMillis() - start));
+
     }
 
 
