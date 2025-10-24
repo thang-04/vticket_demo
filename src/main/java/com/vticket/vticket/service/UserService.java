@@ -16,6 +16,7 @@ import io.micrometer.common.util.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -293,6 +294,7 @@ public class UserService {
         return user;
     }
 
+    @PreAuthorize("hasRole('USER')")
     public UserResponse getMyInfo() {
         long start = System.currentTimeMillis();
         var context = SecurityContextHolder.getContext();

@@ -2,7 +2,6 @@ package com.vticket.vticket.service;
 
 import com.vticket.vticket.domain.mongodb.entity.User;
 import com.vticket.vticket.process.InsertUsersMongoProcess;
-import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.mongodb.core.MongoTemplate;

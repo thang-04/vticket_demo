@@ -4,7 +4,6 @@ import com.vticket.vticket.config.kafka.EmailKafkaProducer;
 import com.vticket.vticket.config.rabbitmq.EmailQueueProducer;
 import com.vticket.vticket.domain.mongodb.entity.User;
 import com.vticket.vticket.domain.mysql.entity.Booking;
-import com.vticket.vticket.domain.mysql.entity.Event;
 import com.vticket.vticket.dto.message.LoginEventMessage;
 import com.vticket.vticket.dto.response.PaymentResponse;
 import org.apache.logging.log4j.LogManager;

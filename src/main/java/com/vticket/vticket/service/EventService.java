@@ -2,12 +2,8 @@ package com.vticket.vticket.service;
 
 import com.google.gson.reflect.TypeToken;
 import com.vticket.vticket.config.redis.RedisKey;
-import com.vticket.vticket.domain.mysql.entity.Booking;
 import com.vticket.vticket.domain.mysql.entity.Event;
-import com.vticket.vticket.domain.mysql.repo.BookingRepo;
 import com.vticket.vticket.domain.mysql.repo.EventRepo;
-import com.vticket.vticket.dto.request.SubmitTicketRequest;
-import com.vticket.vticket.dto.response.SubmitTicketResponse;
 import io.micrometer.common.util.StringUtils;
 import org.apache.commons.collections.CollectionUtils;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,13 +11,9 @@ import org.springframework.stereotype.Service;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
 import static com.vticket.vticket.utils.CommonUtils.gson;
 

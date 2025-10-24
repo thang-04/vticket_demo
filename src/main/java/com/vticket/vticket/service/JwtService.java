@@ -2,13 +2,10 @@ package com.vticket.vticket.service;
 
 import com.vticket.vticket.config.Config;
 import com.vticket.vticket.domain.mongodb.entity.User;
-import com.vticket.vticket.dto.request.IntrospectRequest;
-import com.vticket.vticket.dto.response.IntrospectResponse;
-import com.vticket.vticket.exception.AppException;
-import com.vticket.vticket.utils.CommonUtils;
 import io.jsonwebtoken.*;
 import io.micrometer.common.util.StringUtils;
 import lombok.experimental.NonFinal;
+import org.apache.commons.collections.CollectionUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,8 +14,8 @@ import org.springframework.stereotype.Service;
 import javax.crypto.spec.SecretKeySpec;
 import javax.xml.bind.DatatypeConverter;
 import java.security.Key;
-import java.text.ParseException;
 import java.util.Date;
+import java.util.StringJoiner;
 import java.util.UUID;
 
 @Service
@@ -106,6 +103,7 @@ public class JwtService {
                     .claim("access_token", access_token)
                     .claim("email", email)
                     .claim("device_id", device_id)
+                    .claim("scope", buildScope(user))
                     .claim("created", created)
                     .signWith(signatureAlgorithm, signingKey);
 
@@ -260,6 +258,17 @@ public class JwtService {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    public String buildScope(User user) {
+        StringJoiner scopeJoiner = new StringJoiner(" ");
+
+        if (!CollectionUtils.isEmpty(user.getRoles())) {
+            user.getRoles().forEach(role -> {
+                scopeJoiner.add("ROLE_" + role.getName());
+            });
+        }
+        return scopeJoiner.toString();
     }
 
 //    public IntrospectResponse introspect(IntrospectRequest request) {

@@ -125,7 +125,7 @@ public class SeatService {
         Collections.sort(sortedSeatIds);
 
         //set order key redis
-        String orderKey = "queue:event_" + eventId + "_hold_order";
+        String orderKey = "queue:event_" + eventId + "_hold_order_seatIds["+ seatIds.stream().map(String::valueOf).collect(Collectors.joining("_"))+"]"; ;
         Long order = redis.opsForValue().increment(orderKey); // atomic +1
 
         redis.expire(orderKey, 5, TimeUnit.SECONDS);

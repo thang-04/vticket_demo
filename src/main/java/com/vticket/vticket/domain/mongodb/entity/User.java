@@ -1,6 +1,5 @@
 package com.vticket.vticket.domain.mongodb.entity;
 
-
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
@@ -45,7 +44,7 @@ public class User {
     private String device_id;
 
     @Field("roles")
-    private Set<Role> roles = new HashSet<>();
+    private Set<Role> roles ;
     @Field("is_active")
     private boolean isActive = true;
 

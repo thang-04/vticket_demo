@@ -2,11 +2,9 @@ package com.vticket.vticket.controller;
 
 import com.vticket.vticket.domain.mysql.entity.Booking;
 import com.vticket.vticket.dto.response.MomoCreationResponse;
-import com.vticket.vticket.dto.response.MomoPaymentResponse;
 import com.vticket.vticket.exception.ErrorCode;
 import com.vticket.vticket.service.BookingService;
 import com.vticket.vticket.service.MomoService;
-import com.vticket.vticket.service.SeatService;
 import com.vticket.vticket.utils.ResponseJson;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;

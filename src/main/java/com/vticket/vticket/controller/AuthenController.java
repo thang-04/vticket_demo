@@ -4,7 +4,6 @@ import com.vticket.vticket.config.Config;
 import com.vticket.vticket.domain.mongodb.entity.User;
 import com.vticket.vticket.dto.request.*;
 import com.vticket.vticket.dto.response.AuthenticationResponse;
-import com.vticket.vticket.dto.response.IntrospectResponse;
 import com.vticket.vticket.exception.ErrorCode;
 import com.vticket.vticket.service.JwtService;
 import com.vticket.vticket.service.LoginService;
@@ -18,8 +17,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.text.ParseException;
 
 @RestController
 public class AuthenController {

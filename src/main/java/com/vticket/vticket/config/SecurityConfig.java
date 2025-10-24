@@ -1,7 +1,5 @@
 package com.vticket.vticket.config;
 
-import com.vticket.vticket.config.redis.CustomJwtDecoder;
-import com.vticket.vticket.config.redis.JwtAuthenticationEntryPoint;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -51,14 +49,6 @@ public class SecurityConfig {
                 .anyRequest()
                 .authenticated());
 
-//        httpSecurity.formLogin(form -> form
-//                .loginPage("/login")
-//                .loginProcessingUrl("/login")
-//                .usernameParameter("username")
-//                .passwordParameter("password")
-//                .successForwardUrl("/dashboard")
-//                .permitAll()
-//        );
         httpSecurity.oauth2ResourceServer(oauth2 -> oauth2.jwt(jwtConfigurer -> jwtConfigurer
                         .decoder(customJwtDecoder)
                         .jwtAuthenticationConverter(jwtAuthenticationConverter()))//convert authorities from token

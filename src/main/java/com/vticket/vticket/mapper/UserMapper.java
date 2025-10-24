@@ -4,10 +4,8 @@ package com.vticket.vticket.mapper;
 import com.vticket.vticket.domain.mongodb.entity.User;
 import com.vticket.vticket.dto.request.UserCreationRequest;
 import com.vticket.vticket.dto.response.UserResponse;
-import org.bson.codecs.jsr310.LocalDateCodec;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDate;
 import java.util.Date;
 
 

@@ -1,13 +1,10 @@
 package com.vticket.vticket.domain.mongodb.repo;
 
 import com.vticket.vticket.domain.mongodb.entity.User;
-import com.vticket.vticket.dto.request.UserCreationRequest;
 import com.vticket.vticket.dto.request.UserUpdateRequest;
-import com.vticket.vticket.service.UserService;
 import io.micrometer.common.util.StringUtils;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.bson.types.ObjectId;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.mongodb.core.MongoTemplate;

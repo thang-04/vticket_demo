@@ -1,4 +1,4 @@
-package com.vticket.vticket.config.redis;
+package com.vticket.vticket.config;
 
 import java.util.Date;
 import java.util.Map;
