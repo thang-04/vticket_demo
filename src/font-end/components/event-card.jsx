@@ -1,17 +1,6 @@
 import React from 'react';
 import { Calendar, MapPin } from 'lucide-react';
 
-// Định nghĩa kiểu dữ liệu cho props của component
-interface EventCardProps {
-  id: number;
-  title: string;
-  startTime: string;
-  venue: string;
-  price: number;
-  image: string | null;
-  categoryName: string;
-}
-
 export function EventCard({
   id,
   title,
@@ -20,12 +9,12 @@ export function EventCard({
   price,
   image,
   categoryName,
-}: EventCardProps) {
+}) {
   // Hàm để định dạng chuỗi ngày tháng
-  const formatDate = (dateString: string): string => {
+  const formatDate = (dateString) => {
     if (!dateString) return "N/A";
     try {
-      const options: Intl.DateTimeFormatOptions = { year: 'numeric', month: '2-digit', day: '2-digit' };
+      const options = { year: 'numeric', month: '2-digit', day: '2-digit' };
       const date = new Date(dateString);
       return date.toLocaleDateString("vi-VN", options);
     } catch (error) {
@@ -35,7 +24,7 @@ export function EventCard({
   };
 
   // Hàm để định dạng giá tiền
-  const formatPrice = (priceValue: number): string => {
+  const formatPrice = (priceValue) => {
     if (typeof priceValue !== 'number') return "Free";
     return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(priceValue);
   };

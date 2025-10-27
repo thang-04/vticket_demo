@@ -30,51 +30,10 @@ import {
 import { useToast } from "@/hooks/use-toast"
 import { Phone, Mail, Calendar, MapPin, Ticket, Settings, LogOut, Edit3, Trash2, Save, X } from "lucide-react"
 
-// Định nghĩa kiểu dữ liệu cho user trả về từ API
-interface ApiUserData {
-  id: string;
-  fullName: string;
-  username: string;
-  email: string;
-  address: string;
-  createdAt: string;
-  updatedAt: string;
-  isActive: boolean;
-}
-
-// Định nghĩa kiểu dữ liệu cho response khi update thành công
-interface ApiUpdateResponseData {
-  id: string;
-  full_name: string;
-  username: string;
-  email: string;
-  address: string;
-  avatar: string;
-  created_at: string;
-  updated_at: string;
-  isActive: boolean;
-  access_token: string;
-  refresh_token: string;
-  roles: { name: string; description: string }[];
-}
-
-// Định nghĩa kiểu dữ liệu cho state của component
-interface UserProfileState {
-  name: string;
-  phone: string; // API không có, giữ lại làm mock
-  email: string;
-  joinDate: string;
-  location: string;
-  avatar: string; 
-  totalTickets: number; // API không có, giữ lại làm mock
-  upcomingEvents: number; // API không có, giữ lại làm mock
-}
-
-
 export function UserProfile() {
-  const [user, setUser] = useState<UserProfileState | null>(null);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
@@ -86,7 +45,7 @@ export function UserProfile() {
     email: "",
     location: "",
   })
-  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [avatarFile, setAvatarFile] = useState(null);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
@@ -96,7 +55,7 @@ export function UserProfile() {
   const { toast } = useToast()
   
   // Hàm format ngày tháng
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString) => {
     const date = new Date(dateString);
     return `Tháng ${date.getMonth() + 1}, ${date.getFullYear()}`;
   };
@@ -114,7 +73,7 @@ export function UserProfile() {
 
         const data = await response.json();
         if (data && data.code === 1000 && data.result) {
-            const apiUser: ApiUserData & { avatar?: string } = data.result;
+            const apiUser = data.result;
             setUser({
                 name: apiUser.fullName,
                 email: apiUser.email,
@@ -129,7 +88,7 @@ export function UserProfile() {
             throw new Error(data.desc || "Failed to parse user data.");
         }
 
-      } catch (e: any) {
+      } catch (e) {
         console.error("Failed to fetch user data:", e);
         setError(e.message);
       } finally {
@@ -202,7 +161,7 @@ export function UserProfile() {
       const data = await response.json();
       
       if (response.ok && data.code === 1000 && data.result) {
-        const updatedApiUser: ApiUpdateResponseData = data.result;
+        const updatedApiUser = data.result;
 
         localStorage.setItem("access_token", updatedApiUser.access_token);
         localStorage.setItem("refresh_token", updatedApiUser.refresh_token);
@@ -227,7 +186,7 @@ export function UserProfile() {
       } else {
         throw new Error(data.desc || "Cập nhật không thành công.");
       }
-    } catch (error: any) {
+    } catch (error) {
       toast({
         title: "Lỗi cập nhật",
         description: error.message || "Không thể cập nhật thông tin. Vui lòng thử lại.",
@@ -700,4 +659,3 @@ export function UserProfile() {
     </div>
   )
 }
-

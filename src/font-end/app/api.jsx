@@ -40,10 +40,10 @@ const refreshToken = async () => {
 };
 
 
-export const fetchWithAuth = async (url: string, options: RequestInit = {}): Promise<Response> => {
+export const fetchWithAuth = async (url, options = {}) => {
   let accessToken = localStorage.getItem("access_token");
 
-  const customOptions: RequestInit = {
+  const customOptions = {
     ...options,
     headers: { ...options.headers, 'Authorization': `Bearer ${accessToken}` },
   };
@@ -75,7 +75,7 @@ export const fetchWithAuth = async (url: string, options: RequestInit = {}): Pro
       const newAccessToken = await refreshToken();
       
       // Cập nhật header với token mới và thử lại request ban đầu
-      (customOptions.headers as Record<string, string>)['Authorization'] = `Bearer ${newAccessToken}`;
+      customOptions.headers['Authorization'] = `Bearer ${newAccessToken}`;
       
       console.log("Retrying original request with new token...");
       response = await fetch(url, customOptions); // Gán lại response bằng kết quả của lần gọi lại

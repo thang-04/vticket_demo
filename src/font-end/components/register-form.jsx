@@ -6,38 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 
-interface FormData {
-  firstName: string
-  lastName: string
-  username: string
-  email: string
-  password: string
-  rePassword: string
-}
-
-interface FormErrors {
-  firstName?: string
-  lastName?: string
-  username?: string
-  email?: string
-  password?: string
-  rePassword?: string
-}
-
-export interface RegisterResponse {
-  code: number
-  result?: {
-    id: string
-    email: string
-    firstName: string
-    lastName: string
-  }
-  desc: string
-}
-
-
 export function RegisterForm() {
-  const [formData, setFormData] = useState<FormData>({
+  const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     username: "",
@@ -45,13 +15,13 @@ export function RegisterForm() {
     password: "",
     rePassword: "",
   })
-  const [errors, setErrors] = useState<FormErrors>({})
+  const [errors, setErrors] = useState({})
   const [isLoading, setIsLoading] = useState(false)
   const { toast } = useToast()
   const router = useRouter()
 
-  const validateForm = (): boolean => {
-    const newErrors: FormErrors = {}
+  const validateForm = () => {
+    const newErrors = {}
 
     // Validate first name
     if (!formData.firstName.trim()) {
@@ -103,7 +73,7 @@ export function RegisterForm() {
     return Object.keys(newErrors).length === 0
   }
 
-  const handleInputChange = (field: keyof FormData, value: string) => {
+  const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }))
     // Clear error when user starts typing
     if (errors[field]) {
@@ -130,7 +100,7 @@ const handleRegister = async () => {
       }),
     })
 
-    const data: RegisterResponse = await response.json()
+    const data = await response.json()
 
     if (response.ok && data.code === 1000) {
       toast({

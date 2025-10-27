@@ -1,23 +1,9 @@
 "use client";
-import React, { useState, useEffect, FC } from "react";
+import React, { useState, useEffect } from "react";
 import { ChevronDown, Calendar, MapPin, Ticket } from "lucide-react";
 
-// --- Category Interface ---
-interface Category {
-  id: number;
-  name: string;
-}
-
 // --- EventCard Component ---
-interface EventCardProps {
-  title: string;
-  startTime: string;
-  venue: string;
-  price: number;
-  categoryName: string;
-}
-
-const EventCard: FC<EventCardProps> = ({ title, startTime, venue, price, categoryName }) => (
+const EventCard = ({ title, startTime, venue, price, categoryName }) => (
   <div className="bg-card border rounded-lg overflow-hidden shadow-lg hover:shadow-2xl transition-shadow duration-300">
     <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
         <span className="text-gray-500">Event Image</span>
@@ -35,18 +21,14 @@ const EventCard: FC<EventCardProps> = ({ title, startTime, venue, price, categor
 );
 
 // --- Header Component ---
-const Header: FC = () => (
+const Header = () => (
   <header className="bg-card border-b p-4">
     <h1 className="text-2xl font-bold">V-Ticket</h1>
   </header>
 );
 
 // --- Button Component ---
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-    children: React.ReactNode;
-}
-
-const Button: FC<ButtonProps> = ({ children, ...props }) => (
+const Button = ({ children, ...props }) => (
   <button
     {...props}
     className="inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2"
@@ -57,15 +39,9 @@ const Button: FC<ButtonProps> = ({ children, ...props }) => (
 
 // --- CategoryFilter Component ---
 // This component now receives the categories list as a prop
-interface CategoryFilterProps {
-  categories: Category[];
-  selectedCategories: number[];
-  onCategoryChange: (newCategories: number[]) => void;
-}
-
-const CategoryFilter: FC<CategoryFilterProps> = ({ categories, selectedCategories, onCategoryChange }) => {
+const CategoryFilter = ({ categories, selectedCategories, onCategoryChange }) => {
     
-    const handleCheckboxChange = (categoryId: number) => {
+    const handleCheckboxChange = (categoryId) => {
         const newSelection = selectedCategories.includes(categoryId)
             ? selectedCategories.filter(id => id !== categoryId)
             : [...selectedCategories, categoryId];
@@ -102,21 +78,12 @@ const CategoryFilter: FC<CategoryFilterProps> = ({ categories, selectedCategorie
 
 //=========== MAIN PAGE COMPONENT (Fixed) ===========
 
-interface EventData {
-  event_id: number;
-  title: string;
-  start_time: string;
-  venue: string;
-  price: number;
-  category?: Category; 
-}
-
 export default function EventsPage() {
-  const [events, setEvents] = useState<EventData[]>([]);
-  const [allCategories, setAllCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedCategories, setSelectedCategories] = useState<number[]>([]);
+  const [events, setEvents] = useState([]);
+  const [allCategories, setAllCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedCategories, setSelectedCategories] = useState([]);
 
   // Effect to fetch all categories once on component mount
   useEffect(() => {
@@ -128,7 +95,7 @@ export default function EventsPage() {
             }
             const data = await response.json();
              if (data && data.code === 1000 && Array.isArray(data.result)) {
-                const mappedCategories = data.result.map((cat: any) => ({
+                const mappedCategories = data.result.map((cat) => ({
                     id: cat.category_id || cat.id || cat.categoryId,
                     name: cat.name || cat.categoryName
                 }));
@@ -136,7 +103,7 @@ export default function EventsPage() {
             } else {
                 throw new Error("Invalid data structure for categories");
             }
-        } catch (e: any) {
+        } catch (e) {
             console.error("Failed to fetch categories:", e);
             // You might want to set a specific error state for categories here
         }
@@ -172,7 +139,7 @@ export default function EventsPage() {
         } else {
           throw new Error("Invalid data structure from API");
         }
-      } catch (e: any) {
+      } catch (e) {
         console.error("Failed to fetch events:", e);
         setError(e.message);
         setEvents([]); 
@@ -184,7 +151,7 @@ export default function EventsPage() {
     fetchEvents();
   }, [selectedCategories]); 
 
-  const handleCategoryChange = (newCategories: number[]) => {
+  const handleCategoryChange = (newCategories) => {
     setSelectedCategories(newCategories);
   };
 
@@ -265,4 +232,3 @@ export default function EventsPage() {
     </div>
   );
 }
-

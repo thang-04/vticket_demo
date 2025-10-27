@@ -1,6 +1,6 @@
 "use client"
 
-import type React from "react"
+import React from "react"
 import { useState, useRef, useEffect } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import Image from "next/image"
@@ -24,7 +24,7 @@ export function OtpVerification() {
   const username = searchParams.get("username") || ""
 
 
-  const otpRefs = useRef<Array<HTMLInputElement | null>>([])
+  const otpRefs = useRef([])
 
   useEffect(() => {
     if (!email) {
@@ -34,14 +34,14 @@ export function OtpVerification() {
   }, [email, router])
 
   useEffect(() => {
-    let timer: NodeJS.Timeout
+    let timer
     if (countdown > 0) {
       timer = setTimeout(() => setCountdown(countdown - 1), 1000)
     }
     return () => clearTimeout(timer)
   }, [countdown])
 
-  const handleOtpChange = (index: number, value: string) => {
+  const handleOtpChange = (index, value) => {
     if (value.length > 1) return
 
     const newOtp = [...otp]
@@ -55,13 +55,13 @@ export function OtpVerification() {
     }
   }
 
-  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
+  const handleOtpKeyDown = (index, e) => {
     if (e.key === "Backspace" && !otp[index] && index > 0) {
       otpRefs.current[index - 1]?.focus()
     }
   }
 
-  const handleOtpPaste = (e: React.ClipboardEvent) => {
+  const handleOtpPaste = (e) => {
     e.preventDefault()
     const pastedData = e.clipboardData.getData("text").slice(0, 6)
     const newOtp = [...otp]
@@ -201,7 +201,7 @@ export function OtpVerification() {
                 {otp.map((digit, index) => (
                   <Input
                     key={index}
-                    ref={(el: HTMLInputElement | null) => {
+                    ref={(el) => {
                       otpRefs.current[index] = el
                     }}
                     type="text"

@@ -6,22 +6,11 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useToast } from "@/hooks/use-toast"
 
-interface LoginResponse {
-  code: number
-  codeName: string
-  desc: string
-  result?: {
-    access_token: string
-    refresh_token: string
-  }
-}
-
-
 export function LoginForm() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [socialLoading, setSocialLoading] = useState<string | null>(null)
+  const [socialLoading, setSocialLoading] = useState(null)
   const [error, setError] = useState("")
   const { toast } = useToast()
   const router = useRouter()
@@ -46,7 +35,7 @@ export function LoginForm() {
         }),
       })
 
-      const data: LoginResponse = await response.json()
+      const data = await response.json()
 
       if (response.ok && data.code === 1000) {
         if (data.result) {
@@ -72,7 +61,7 @@ export function LoginForm() {
 
 
 
-  const handleSocialLogin = async (provider: "google" | "facebook" | "apple") => {
+  const handleSocialLogin = async (provider) => {
     setSocialLoading(provider)
     setError("")
 

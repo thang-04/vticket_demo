@@ -25,7 +25,7 @@ const eventData = {
 🎵 Một câu chuyện âm nhạc xuyên suốt lịch sử – chạm vào lòng tự hào của những trái tim Việt Nam`,
 }
 
-export default function EventDetailPage({ params }: { params: { id: string } }) {
+export default function EventDetailPage({ params }) {
   return (
     <div className="min-h-screen bg-background">
       <Header />

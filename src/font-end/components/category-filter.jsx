@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { ChevronDown, Filter } from "lucide-react";
 
 // --- Mock Components for standalone example ---
-const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant?: string }> = ({ children, className, ...props }) => (
+const Button = ({ children, className, ...props }) => (
   <button
     {...props}
     className={`inline-flex items-center justify-center rounded-md text-sm font-medium ${className}`}
@@ -12,34 +12,19 @@ const Button: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { variant
   </button>
 );
 
-const Checkbox: React.FC<any> = ({ id, checked, onCheckedChange }) => (
+const Checkbox = ({ id, checked, onCheckedChange }) => (
     <input type="checkbox" id={id} checked={checked} onChange={onCheckedChange} className="mr-2" />
 );
 // --- End Mock Components ---
 
 
-// Định nghĩa kiểu dữ liệu cho Category từ API
-interface ApiCategory {
-  category_id: number;
-  name: string;
-  description: string;
-}
-
-// Định nghĩa cấu trúc cho một mục lọc trong UI
-interface FilterSection {
-    id: string;
-    label: string;
-    items: string[];
-}
-
-
 export function CategoryFilter() {
-  const [apiCategories, setApiCategories] = useState<ApiCategory[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
+  const [apiCategories, setApiCategories] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const [expandedCategories, setExpandedCategories] = useState<string[]>(["chuyen-muc"]);
-  const [selectedFilters, setSelectedFilters] = useState<string[]>([]);
+  const [expandedCategories, setExpandedCategories] = useState(["chuyen-muc"]);
+  const [selectedFilters, setSelectedFilters] = useState([]);
   
   // Gọi API để lấy danh sách categories
   useEffect(() => {
@@ -56,7 +41,7 @@ export function CategoryFilter() {
         } else {
           throw new Error("Invalid data structure from API");
         }
-      } catch (e: any) {
+      } catch (e) {
         setError(e.message);
         console.error("Failed to fetch categories:", e);
       } finally {
@@ -67,7 +52,7 @@ export function CategoryFilter() {
   }, []);
 
   // Tạo danh sách bộ lọc cuối cùng bằng cách kết hợp dữ liệu từ API và dữ liệu cứng
-  const filterSections: FilterSection[] = [
+  const filterSections = [
     {
         id: "chuyen-muc",
         label: "Chuyên mục",
@@ -90,13 +75,13 @@ export function CategoryFilter() {
   ];
 
 
-  const toggleCategory = (categoryId: string) => {
+  const toggleCategory = (categoryId) => {
     setExpandedCategories((prev) =>
       prev.includes(categoryId) ? prev.filter((id) => id !== categoryId) : [...prev, categoryId],
     );
   };
 
-  const toggleFilter = (filter: string) => {
+  const toggleFilter = (filter) => {
     setSelectedFilters((prev) => (prev.includes(filter) ? prev.filter((f) => f !== filter) : [...prev, filter]));
   };
 
